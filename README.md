@@ -1,6 +1,6 @@
 # DrillSense AI
 
-## GPU-Accelerated Decision Intelligence for Oilfield Monitoring
+## GPU-Accelerated AI Decision Intelligence Platform for Predictive Oilfield Monitoring using Google Cloud, RAPIDS, XGBoost, Isolation Forest, and Gemini AI.
 
 DrillSense AI is an AI-powered decision intelligence platform that helps petroleum engineers identify high-risk wells, detect anomalies, prioritize maintenance, and generate engineering recommendations using machine learning and Google's Gemini AI.
 
@@ -85,6 +85,16 @@ Decision Intelligence Dashboard
 - BigQuery
 - Gemini
 - Cloud Run
+
+
+
+## Future Enhancements
+
+- Real-time sensor streaming using Apache Kafka
+- Google Cloud Pub/Sub integration
+- Vertex AI predictive maintenance pipeline
+- Fleet-level well optimization
+- Predictive maintenance scheduling
 
 ---
 Om Tripathi

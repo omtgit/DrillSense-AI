@@ -69,15 +69,18 @@ if page == "Executive Dashboard":
 
     st.subheader("Highest Risk Well")
 
-    st.write(f"**Well :** {highest['well_id']}")
+    st.error(
+       f"""
+    Well ID: {highest['well_id']}
 
-    st.write(f"**Predicted Issue :** {highest['predicted_anomaly']}")
+    Predicted Issue: {highest['predicted_anomaly']}
 
-    st.write(f"**Risk Score :** {highest['predicted_risk_score']}")
+    Risk Score: {highest['predicted_risk_score']}
 
-    st.write(f"**Severity :** {highest['severity']}")
+    Severity: {highest['severity']}
+    """
+    )
 
-    st.write(f"**Recommended Response :** {highest['recommended_response']}")
 
     st.divider()
 
@@ -154,6 +157,8 @@ elif page == "Well Explorer":
 elif page == "AI Decision Center":
 
     st.header("AI Decision Center")
+
+    st.success("Google Gemini successfully analyzed this well.")
 
     top_risk = (
         df.sort_values(

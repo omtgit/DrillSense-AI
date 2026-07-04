@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+models/
+
+data/raw/
