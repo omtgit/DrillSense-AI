@@ -10,11 +10,18 @@ st.set_page_config(
     layout="wide"
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from google.cloud import storage
+from io import BytesIO
+import os
 
-DATA_FILE = PROJECT_ROOT / "data" / "processed" / "drillsense_processed_data.csv"
-
-df = pd.read_csv(DATA_FILE)
+if os.path.exists("data/processed/drillsense_processed_data.csv"):
+    df = pd.read_csv("data/processed/drillsense_processed_data.csv")
+else:
+    client = storage.Client()
+    bucket = client.bucket("drillsense-ai-2026")
+    blob = bucket.blob("drillsense_processed_data.csv")
+    csv_bytes = blob.download_as_bytes()
+    df = pd.read_csv(BytesIO(csv_bytes))
 
 st.title("⛽ DrillSense AI")
 st.subheader("GPU-Accelerated Decision Intelligence for Oilfield Monitoring")
