@@ -53,33 +53,30 @@ DrillSense AI automatically detects anomalies, predicts operational risks, ranks
 
 ### GPU
 
-- NVIDIA RAPIDS cuDF
+- NVIDIA T4 (RAPIDS cuDF)
 
 ---
 
 ## Architecture
 
+```text
 Sensor Data
-
-↓
-
+      │
+      ▼
 Feature Engineering
-
-↓
-
+      │
+      ▼
 Isolation Forest
-
-↓
-
+      │
+      ▼
 XGBoost
-
-↓
-
+      │
+      ▼
 Gemini AI
-
-↓
-
-Decision Intelligence Dashboard
+      │
+      ▼
+Decision Intelligence Dashboard 
+```
 
 
 ## Google Cloud Services Used

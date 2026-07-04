@@ -220,23 +220,41 @@ elif page == "GPU Performance":
             "Records",
             "CPU Library",
             "GPU Library",
-            "GPU Used",
-            "Estimated Speed-up"
+            "GPU Hardware",
+            "CPU Read Time",
+            "GPU Read Time",
+            "Measured Speed-up",
+            "Benchmark Status"
         ],
         "Value": [
             "107 MB",
             "432,000",
             "Pandas",
-            "cuDF (RAPIDS)",
-            "NVIDIA T4",
-            "To be measured in Colab"
+            "RAPIDS cuDF",
+            "NVIDIA Tesla T4",
+            "2.0563 sec",
+            "0.7807 sec",
+            "2.63x",
+            "Completed"
         ]
     }
 
     st.table(pd.DataFrame(gpu))
 
-    st.info(
-        "GPU benchmark will be generated after running the RAPIDS benchmark in Google Colab."
+    st.metric(
+       "Measured GPU Speed-up",
+       "2.63×",
+       delta="Compared to CPU"
+    )
+
+    st.success(
+       """
+    GPU benchmark successfully completed on Google Colab using an NVIDIA Tesla T4 GPU.
+    
+    The RAPIDS cuDF implementation processed the dataset approximately **2.63× faster**
+    than the CPU-based Pandas implementation, demonstrating the advantage of GPU-accelerated
+    analytics for large-scale oilfield telemetry processing.
+    """
     )
 
 # ===================================================
@@ -262,25 +280,26 @@ elif page == "About":
 
 ### Workflow
 
+```text
 Sensor Data
-
-↓
+      │
+      ▼
 
 Feature Engineering
-
-↓
+      │
+      ▼
 
 Anomaly Detection
-
-↓
+      │
+      ▼
 
 Risk Prediction
-
-↓
+      │
+      ▼
 
 AI Decision Intelligence
-
-↓
+      │
+      ▼
 
 Cloud Deployment
 
