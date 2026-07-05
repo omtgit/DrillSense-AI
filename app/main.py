@@ -10,18 +10,18 @@ st.set_page_config(
     layout="wide"
 )
 
-from google.cloud import storage
-from io import BytesIO
-import os
+from google.cloud import bigquery
 
-if os.path.exists("data/processed/drillsense_processed_data.csv"):
-    df = pd.read_csv("data/processed/drillsense_processed_data.csv")
-else:
-    client = storage.Client()
-    bucket = client.bucket("drillsense-ai-2026")
-    blob = bucket.blob("drillsense_processed_data.csv")
-    csv_bytes = blob.download_as_bytes()
-    df = pd.read_csv(BytesIO(csv_bytes))
+client = bigquery.Client()
+
+project_id = client.project
+
+query = f"""
+SELECT *
+FROM `{project_id}.drillsense.sensor_data`
+"""
+
+df = client.query(query).to_dataframe()
 
 st.title("⛽ DrillSense AI")
 st.subheader("GPU-Accelerated Decision Intelligence for Oilfield Monitoring")
