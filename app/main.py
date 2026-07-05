@@ -4,9 +4,11 @@ import plotly.express as px
 from pathlib import Path
 from gemini_utils import generate_report
 
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+
 st.set_page_config(
     page_title="DrillSense AI",
-    page_icon="⛽",
+    page_icon=str(ASSETS_DIR / "logo.png"),
     layout="wide"
 )
 
