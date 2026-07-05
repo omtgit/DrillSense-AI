@@ -27,6 +27,10 @@ def load_data():
         temperature_c,
         flow_rate_bpd,
         vibration,
+        gas_ratio,
+        pump_rpm,
+        torque,
+        rop,
         anomaly_flag,
         severity,
         recommended_response,
@@ -182,7 +186,7 @@ elif page == "AI Decision Center":
 
     st.header("AI Decision Center")
 
-    st.success("Google Gemini successfully analyzed this well.")
+    st.success("Google Gemini successfully analyzed wells.")
 
     top_risk = (
         df.sort_values(
