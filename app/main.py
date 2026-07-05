@@ -16,12 +16,29 @@ client = bigquery.Client()
 
 project_id = client.project
 
-query = f"""
-SELECT *
-FROM `{project_id}.drillsense.sensor_data`
-"""
+@st.cache_data
+def load_data():
 
-df = client.query(query).to_dataframe()
+    query = f"""
+    SELECT
+        timestamp,
+        well_id,
+        pressure_psi,
+        temperature_c,
+        flow_rate_bpd,
+        vibration,
+        anomaly_flag,
+        severity,
+        recommended_response,
+        health_score,
+        predicted_anomaly,
+        predicted_risk_score
+    FROM `{project_id}.drillsense.sensor_data`
+    """
+
+    return client.query(query).to_dataframe()
+
+df = load_data()
 
 st.title("⛽ DrillSense AI")
 st.subheader("GPU-Accelerated Decision Intelligence for Oilfield Monitoring")
