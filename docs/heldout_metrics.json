@@ -1,0 +1,44 @@
+{
+  "split": "held-out wells",
+  "train_wells": 40,
+  "test_wells": [
+    "WELL-003",
+    "WELL-005",
+    "WELL-011",
+    "WELL-012",
+    "WELL-023",
+    "WELL-028",
+    "WELL-029",
+    "WELL-032",
+    "WELL-039",
+    "WELL-042"
+  ],
+  "test_rows": 86400,
+  "test_anomaly_rows": 1257,
+  "precision": 0.4422,
+  "recall": 0.9793,
+  "f1": 0.6093,
+  "per_type_recall": {
+    "Leak Risk": {
+      "rows": 162,
+      "recall": 0.9938
+    },
+    "Kick Risk": {
+      "rows": 276,
+      "recall": 0.9638
+    },
+    "Pump Failure": {
+      "rows": 276,
+      "recall": 1.0
+    },
+    "Sensor Drift": {
+      "rows": 303,
+      "recall": 0.9505
+    },
+    "High Vibration": {
+      "rows": 240,
+      "recall": 1.0
+    }
+  },
+  "note": "Synthetic data with very large injected shifts; not evidence of field performance."
+}
