@@ -85,7 +85,7 @@ page = st.sidebar.radio(
         "Executive Dashboard",
         "Well Explorer",
         "AI Decision Center",
-        "GPU Performance",
+        "CPU vs GPU Benchmark",
         "About"
     ]
 )
@@ -322,12 +322,20 @@ elif page == "AI Decision Center":
 # GPU Performance
 # ===================================================
 
-elif page == "GPU Performance":
+elif page == "CPU vs GPU Benchmark":
 
-    st.header("GPU Performance")
+    st.header("CPU vs GPU benchmark (Colab, Tesla T4, offline)")
+
+    st.warning(
+        "This is a one-off offline benchmark, not part of this app. It measured only "
+        "the time to **read the 432,000-row, 107 MB CSV file** with pandas (CPU) versus "
+        "RAPIDS cuDF (GPU) on Google Colab. This app runs on CPU and does no GPU "
+        "work; model training and inference were not benchmarked."
+    )
 
     gpu = {
         "Metric": [
+            "Task measured",
             "Dataset Size",
             "Records",
             "CPU Library",
@@ -335,38 +343,27 @@ elif page == "GPU Performance":
             "GPU Hardware",
             "CPU Read Time",
             "GPU Read Time",
-            "Measured Speed-up",
-            "Benchmark Status"
+            "Measured Speed-up"
         ],
         "Value": [
+            "CSV read time only",
             "107 MB",
             "432,000",
             "Pandas",
             "RAPIDS cuDF",
-            "NVIDIA Tesla T4",
+            "NVIDIA Tesla T4 (Google Colab)",
             "2.0563 sec",
             "0.7807 sec",
-            "2.63x",
-            "Completed"
+            "2.63x"
         ]
     }
 
     st.table(pd.DataFrame(gpu))
 
-    st.metric(
-       "Measured GPU Speed-up",
-       "2.63×",
-       delta="Compared to CPU"
-    )
-
-    st.success(
-       """
-    GPU benchmark successfully completed on Google Colab using an NVIDIA Tesla T4 GPU.
-    
-    The RAPIDS cuDF implementation processed the dataset approximately **2.63× faster**
-    than the CPU-based Pandas implementation, demonstrating the advantage of GPU-accelerated
-    analytics for large-scale oilfield telemetry processing.
-    """
+    st.caption(
+        "Single run, numbers recorded at the time (see docs/BENCHMARKS.md); no repeats "
+        "or variance were kept. Re-run on your own GPU with "
+        "`python benchmarks/gpu_benchmark.py`."
     )
 
 # ===================================================
@@ -387,7 +384,7 @@ elif page == "About":
 - Streamlit
 - XGBoost
 - Isolation Forest
-- RAPIDS cuDF
+- RAPIDS cuDF (offline CSV-read benchmark only)
 - Plotly
 
 ### Workflow
