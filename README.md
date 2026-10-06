@@ -96,6 +96,8 @@ DrillSense-AI/
 │   └── dashboard.png
 │
 ├── notebooks/
+├── scripts/
+├── data/sample/
 │
 ├── Dockerfile
 ├── cloudbuild.yaml
@@ -105,6 +107,32 @@ DrillSense-AI/
 ├── .gitignore
 └── .dockerignore
 ```
+
+---
+
+## Run locally
+
+Requires **Python 3.12+** (the pinned `xgboost==3.3.0` does not install on 3.11).
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Regenerate the synthetic data and train the models (seeded, deterministic)
+python notebooks/01_generate_synthetic_data.py   # -> data/raw/        (432,000 rows)
+python notebooks/02_feature_engineering.py       # -> data/processed/
+python notebooks/03_anomaly_detection.py         # -> models/ + predictions
+
+# Optional: check how much of the headline accuracy is real
+python scripts/audit_baseline.py
+```
+
+A small committed sample (3 wells x 3 days, 2,592 rows) is in [`data/sample/`](data/sample/)
+so you can inspect the data without running the pipeline.
+
+> **Note:** the Streamlit app (`streamlit run app/main.py`) currently still reads from
+> BigQuery and Gemini, so it needs Google Cloud credentials (`GEMINI_API_KEY` in `.env` for
+> Gemini). A local data source is planned for a later phase.
 
 ---
 
