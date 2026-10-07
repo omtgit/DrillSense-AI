@@ -4,71 +4,58 @@ from google import genai
 
 
 
-def get_client():
-    """Build the Gemini client on first use so the app starts without a key."""
+# Verify this model name is still served before relying on it; override with GEMINI_MODEL.
+DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+def model_name():
+    return os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_MODEL
+
+
+def get_client(api_key=None):
+    """Build the Gemini client on first use so the app starts without a key.
+
+    A key typed into the sidebar wins over GEMINI_API_KEY from the environment.
+    """
     load_dotenv()
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = api_key or os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not set; add it to your environment or .env to generate reports.")
+        raise RuntimeError("No Gemini API key: paste one in the sidebar or set GEMINI_API_KEY.")
     return genai.Client(api_key=api_key)
 
 
-def generate_report(row):
+PROMPT = """Rewrite the engineering report below so it reads more smoothly.
+Rules:
+- Use only the facts in the report. Do not add numbers, causes, wells, dates or recommendations.
+- Copy every number exactly as written. Do not round or convert units.
+- Keep the same section headings, in the same order, as markdown "##" headings.
+- Keep it under 250 words.
 
-    prompt = f"""
-You are an experienced petroleum production engineer.
-
-Analyze the following well telemetry summary.
-
-Well ID: {row['well_id']}
-
-Predicted Issue:
-{row['predicted_anomaly']}
-
-Severity:
-{row['severity']}
-
-Risk Score:
-{row['predicted_risk_score']}
-
-Pressure:
-{row['pressure_psi']} psi
-
-Temperature:
-{row['temperature_c']} °C
-
-Flow Rate:
-{row['flow_rate_bpd']} BPD
-
-Gas Ratio:
-{row['gas_ratio']}
-
-Pump RPM:
-{row['pump_rpm']}
-
-Torque:
-{row['torque']}
-
-Rate of Penetration:
-{row['rop']}
-
-Recommended Response:
-{row['recommended_response']}
-
-Write a professional engineering report with the following sections:
-
-1. Operational Summary
-2. Possible Root Cause
-3. Operational Risk
-4. Immediate Actions
-5. Longer-Term Recommendation
-
-Keep the response under 250 words.
+REPORT:
+{report}
 """
 
-    response = get_client().models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
 
-    return response.text
+def rephrase_report(template_report, api_key=None):
+    """Ask Gemini to rephrase the template report. Returns (text, error_or_None).
+
+    Falls back to the template text if the call fails or the reply contains a number
+    that is not in the template. The key is never logged or included in error text.
+    """
+    from report import numbers_are_grounded
+
+    try:
+        response = get_client(api_key).models.generate_content(
+            model=model_name(), contents=PROMPT.format(report=template_report)
+        )
+        text = response.text or ""
+    except Exception as exc:
+        msg = f"{type(exc).__name__}: {exc}"
+        if api_key:
+            msg = msg.replace(api_key, "***")
+        return template_report, f"Gemini call failed ({msg}); showing the template report."
+    if not text.strip():
+        return template_report, "Gemini returned no text; showing the template report."
+    if not numbers_are_grounded(text, template_report):
+        return template_report, "Gemini introduced numbers not in the facts; showing the template report."
+    return text, None

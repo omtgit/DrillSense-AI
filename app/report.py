@@ -54,7 +54,7 @@ def top_contributors(well_df, event_mask, k=3):
     This is a robust z-score (median and MAD of the well's rows not flagged by the model).
     It describes which signals moved; it is not model attribution (SHAP comes later).
     """
-    base = well_df[~well_df["predicted_anomaly"].ne("Normal")]
+    base = well_df[well_df["predicted_anomaly"].eq("Normal")]
     event = well_df[event_mask]
     out = []
     if base.empty or event.empty:
