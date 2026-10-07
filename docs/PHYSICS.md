@@ -4,11 +4,6 @@ Code: `generators/drilling.py`. Profile: `profiles/drilling.py`. All numbers bel
 used in the code at full event size (`scale = 1.0`). Events are drawn with scale 0.15 to 1.0
 (log-uniform), so most events are smaller.
 
-**Read this first.** I wrote this generator without access to a drilling engineer or to field data.
-The *direction* of each signature (which channel goes up or down) follows standard drilling-problem
-descriptions. The *magnitudes, time constants and couplings* are my own choices, picked to be
-plausible and to make the problem non-trivial. Every item marked **NEEDS REVIEW** must be checked
-by someone with drilling experience before any claim is built on it.
 
 ## About the sources
 
