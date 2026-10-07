@@ -5,61 +5,34 @@ turns that dict into markdown. The optional Gemini step (gemini_utils.py) may on
 the rendered text, and numbers_are_grounded() rejects output that introduces new numbers.
 """
 import re
+import sys
+from pathlib import Path
 
 import pandas as pd
 
-CHANNELS = {
-    "pressure_psi": "pressure (psi)",
-    "temperature_c": "temperature (°C)",
-    "flow_rate_bpd": "flow rate (BPD)",
-    "vibration": "vibration",
-    "gas_ratio": "gas ratio",
-    "pump_rpm": "pump RPM",
-    "torque": "torque",
-    "rop": "rate of penetration",
-}
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from profiles import get_profile  # noqa: E402
 
-# Wording per predicted class. Hypotheses only: the data cannot confirm a root cause.
-VOCAB = {
-    "Pump Failure": (
-        "pump degradation or loss of pump efficiency",
-        "Loss of circulation or lift capacity and possible equipment damage.",
-    ),
-    "Leak Risk": (
-        "a leak or loss of containment in the flow path",
-        "Fluid loss, pressure loss and possible environmental release.",
-    ),
-    "Kick Risk": (
-        "formation fluid or gas entering the wellbore",
-        "Loss of well control if the influx is not confirmed and managed.",
-    ),
-    "Sensor Drift": (
-        "sensor drift or calibration error rather than a real process change",
-        "Decisions taken on unreliable readings; the real condition may be hidden.",
-    ),
-}
-DEFAULT_VOCAB = (
-    "an operational change that this tool cannot attribute to a specific cause",
-    "Unclear; treat as unverified until checked by an engineer.",
-)
+DEFAULT_PROFILE = "production"
 
 
 def _mad_sigma(s):
     return 1.4826 * (s - s.median()).abs().median()
 
 
-def top_contributors(well_df, event_mask, k=3):
+def top_contributors(well_df, event_mask, k=3, profile=None):
     """Channels whose mean during the event sits furthest from the well's own normal level.
 
     This is a robust z-score (median and MAD of the well's rows not flagged by the model).
     It describes which signals moved; it is not model attribution (SHAP comes later).
     """
+    labels = (profile or get_profile(DEFAULT_PROFILE)).channel_labels
     base = well_df[well_df["predicted_anomaly"].eq("Normal")]
     event = well_df[event_mask]
     out = []
     if base.empty or event.empty:
         return out
-    for col in CHANNELS:
+    for col in labels:
         if col not in well_df.columns:
             continue
         sigma = _mad_sigma(base[col])
@@ -68,13 +41,13 @@ def top_contributors(well_df, event_mask, k=3):
         baseline = float(base[col].median())
         observed = float(event[col].mean())
         z = (observed - baseline) / sigma
-        out.append({"channel": col, "label": CHANNELS[col], "baseline": baseline,
+        out.append({"channel": col, "label": labels[col], "baseline": baseline,
                     "observed": observed, "z": float(z)})
     out.sort(key=lambda c: (-abs(c["z"]), c["channel"]))
     return out[:k]
 
 
-def build_finding(df, row, k=3):
+def build_finding(df, row, k=3, profile=None):
     """Structured facts for the event containing `row` (a selected well's top-risk row)."""
     well = df[df["well_id"] == row["well_id"]].sort_values("timestamp").reset_index(drop=True)
     flagged = well["predicted_anomaly"].ne("Normal")
@@ -97,7 +70,7 @@ def build_finding(df, row, k=3):
             n_rows=int(mask.sum()),
             start=str(ev["timestamp"].iloc[0]),
             end=str(ev["timestamp"].iloc[-1]),
-            contributors=top_contributors(well, mask, k),
+            contributors=top_contributors(well, mask, k, profile),
         )
     return finding
 
@@ -106,8 +79,9 @@ def _fmt(x):
     return f"{x:,.2f}"
 
 
-def render_report(f):
-    cause, risk = VOCAB.get(f["predicted_anomaly"], DEFAULT_VOCAB)
+def render_report(f, profile=None):
+    p = profile or get_profile(DEFAULT_PROFILE)
+    cause, risk = p.vocab.get(f["predicted_anomaly"], p.default_vocab)
     if not f["detected"]:
         return (
             "## Operational Summary\n"

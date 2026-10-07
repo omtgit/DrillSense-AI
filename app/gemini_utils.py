@@ -4,12 +4,19 @@ from google import genai
 
 
 
-# Verify this model name is still served before relying on it; override with GEMINI_MODEL.
-DEFAULT_MODEL = "gemini-2.5-flash"
+# Not verified against a live key; override with GEMINI_MODEL or the sidebar field.
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
 
 def model_name():
     return os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_MODEL
+
+
+def is_model_not_found(exc):
+    """True if the exception looks like an API 404 / model-not-found error."""
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    text = f"{type(exc).__name__} {exc}".lower()
+    return code == 404 or "not_found" in text or "not found" in text or "404" in text
 
 
 def get_client(api_key=None):
@@ -36,7 +43,7 @@ REPORT:
 """
 
 
-def rephrase_report(template_report, api_key=None):
+def rephrase_report(template_report, api_key=None, model=None):
     """Ask Gemini to rephrase the template report. Returns (text, error_or_None).
 
     Falls back to the template text if the call fails or the reply contains a number
@@ -46,10 +53,16 @@ def rephrase_report(template_report, api_key=None):
 
     try:
         response = get_client(api_key).models.generate_content(
-            model=model_name(), contents=PROMPT.format(report=template_report)
+            model=(model or "").strip() or model_name(), contents=PROMPT.format(report=template_report)
         )
         text = response.text or ""
     except Exception as exc:
+        if is_model_not_found(exc):
+            used = (model or "").strip() or model_name()
+            return template_report, (
+                f"Model '{used}' was not found by the Gemini API. Try another model name in the "
+                "sidebar; showing the template report."
+            )
         msg = f"{type(exc).__name__}: {exc}"
         if api_key:
             msg = msg.replace(api_key, "***")

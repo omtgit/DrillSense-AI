@@ -76,7 +76,7 @@ with st.sidebar.expander("Optional: Gemini rephrasing"):
         "add facts. The key stays in this browser session only and is never stored or logged."
     )
     st.text_input("Gemini API key", type="password", key="gemini_api_key")
-    st.caption(f"Model: {model_name()} (set GEMINI_MODEL to change)")
+    st.text_input("Gemini model", value=model_name(), key="gemini_model")
 
 # ===================================================
 # Executive Dashboard
@@ -303,7 +303,11 @@ elif page == "AI Decision Center":
 
     if st.button("Rephrase with Gemini"):
         with st.spinner("Rephrasing..."):
-            text, warning = rephrase_report(template, st.session_state.get("gemini_api_key") or None)
+            text, warning = rephrase_report(
+                template,
+                st.session_state.get("gemini_api_key") or None,
+                st.session_state.get("gemini_model") or None,
+            )
         if warning:
             st.warning(warning)
         else:
