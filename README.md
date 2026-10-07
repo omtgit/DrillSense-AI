@@ -153,6 +153,28 @@ Run the tests with `pip install pytest && python -m pytest tests`.
 To run on the full dataset after the pipeline above, set
 `LOCAL_DATA_PATH=data/processed/drillsense_processed_data.csv` (written by notebook 03).
 
+### Domain profiles and the drilling generator
+
+Everything domain-specific (channels, anomaly types, physics features, severity rules, report
+wording) lives in `profiles/`. `profiles/production.py` describes the original production-style
+variables (unchanged); `profiles/drilling.py` describes rig drilling channels: depth, WOB, RPM,
+torque, ROP, standpipe pressure, flow in/out, pit volume, mud weight and gas. The report and
+feature code read the profile, so a new domain is a new profile module.
+
+A seeded drilling generator (`generators/drilling.py`) simulates connections, formation changes
+and six gradual anomalies (kick, lost circulation, stuck pipe, washout, pack-off, sensor drift)
+with variable, sometimes small, magnitudes and some overlap:
+
+```bash
+python scripts/generate_drilling_data.py            # -> data/raw/drilling/ (10 wells x 3 days, gitignored)
+python scripts/generate_drilling_data.py --sample   # -> data/sample/drilling/ (committed, 4,320 rows)
+```
+
+Every signature and assumption, with sources and **NEEDS REVIEW** flags, is in
+[`docs/PHYSICS.md`](docs/PHYSICS.md). The physics is my own plausible model, not field data, and
+has not been reviewed by a drilling engineer. The Streamlit app does not read the drilling data
+yet (detectors and evaluation on it are the next phase).
+
 ---
 
 ## Future Enhancements
