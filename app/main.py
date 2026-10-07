@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from pathlib import Path
+from data_source import data_source_name, load_sensor_data
 from gemini_utils import generate_report
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -14,39 +15,15 @@ st.set_page_config(
     layout="wide"
 )
 
-from google.cloud import bigquery
-
-client = bigquery.Client()
-
-project_id = client.project
-
 @st.cache_data
 def load_data():
+    return load_sensor_data()
 
-    query = f"""
-    SELECT
-        timestamp,
-        well_id,
-        pressure_psi,
-        temperature_c,
-        flow_rate_bpd,
-        vibration,
-        gas_ratio,
-        pump_rpm,
-        torque,
-        rop,
-        anomaly_flag,
-        severity,
-        recommended_response,
-        health_score,
-        predicted_anomaly,
-        predicted_risk_score
-    FROM `{project_id}.drillsense.sensor_data`
-    """
-
-    return client.query(query).to_dataframe()
-
-df = load_data()
+try:
+    df = load_data()
+except Exception as exc:
+    st.error(f"Could not load data: {type(exc).__name__}: {exc}")
+    st.stop()
 
 
 def rank_by_risk(frame):
@@ -89,6 +66,8 @@ page = st.sidebar.radio(
         "About"
     ]
 )
+
+st.sidebar.caption(f"Data source: {data_source_name()}")
 
 # ===================================================
 # Executive Dashboard

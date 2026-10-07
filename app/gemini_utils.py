@@ -2,11 +2,16 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+
+def get_client():
+    """Build the Gemini client on first use so the app starts without a key."""
+    load_dotenv()
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set; add it to your environment or .env to generate reports.")
+    return genai.Client(api_key=api_key)
+
 
 def generate_report(row):
 
@@ -61,7 +66,7 @@ Write a professional engineering report with the following sections:
 Keep the response under 250 words.
 """
 
-    response = client.models.generate_content(
+    response = get_client().models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )

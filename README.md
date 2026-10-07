@@ -88,8 +88,8 @@ DrillSense-AI/
 │
 ├── app/
 │   ├── main.py
-│   ├── gemini_utils.py
-│   └── data_loader.py
+│   ├── data_source.py
+│   └── gemini_utils.py
 │
 ├── assets/
 │   ├── logo.png
@@ -130,9 +130,25 @@ python scripts/audit_baseline.py
 A small committed sample (3 wells x 3 days, 2,592 rows) is in [`data/sample/`](data/sample/)
 so you can inspect the data without running the pipeline.
 
-> **Note:** the Streamlit app (`streamlit run app/main.py`) currently still reads from
-> BigQuery and Gemini, so it needs Google Cloud credentials (`GEMINI_API_KEY` in `.env` for
-> Gemini). A local data source is planned for a later phase.
+### Run the app
+
+```bash
+pip install -r requirements.txt
+streamlit run app/main.py
+```
+
+No cloud account or API key is needed. By default the app reads the committed sample in
+`data/sample/`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DATA_SOURCE` | `local` | `local` reads CSV/parquet files; `bigquery` reads `<project>.drillsense.sensor_data` (optional, needs Google Cloud credentials) |
+| `LOCAL_DATA_PATH` | `data/sample` | A CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
+| `BIGQUERY_TABLE` | `<project>.drillsense.sensor_data` | Override the BigQuery table (only with `DATA_SOURCE=bigquery`) |
+| `GEMINI_API_KEY` | unset | Only needed for the "Generate AI Engineering Report" button; everything else works without it |
+
+To run on the full dataset after the pipeline above, set
+`LOCAL_DATA_PATH=data/processed/drillsense_processed_data.csv` (written by notebook 03).
 
 ---
 
