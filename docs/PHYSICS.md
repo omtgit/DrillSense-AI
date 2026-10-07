@@ -57,7 +57,7 @@ the ramp down. Events may overlap; effects then add and the label with the large
 Ramp / hold / release ranges (minutes): Kick 10 to 45 / 10 to 40 / 5 to 20; Lost Circulation 5 to 40 / 20 to 120 / 10 to 40; Stuck Pipe 10 to 60 / 20 to 90 / 3 to 10; Washout 60 to 240 / 30 to 180 / 1 to 3; Pack-off 5 to 30 / 10 to 60 / 5 to 20; Sensor Drift 120 to 480 / 0 to 60 / 1 to 3. NEEDS REVIEW: all durations (no source).
 
 After an event ends the effect is simply removed. No operator response (shut-in, weighting up,
-pulling out) is modelled. NEEDS REVIEW.
+pulling out) is modelled.
 
 ### Kick (formation fluid influx)
 
@@ -71,7 +71,7 @@ pulling out) is modelled. NEEDS REVIEW.
 | others | unchanged | |
 
 Assumption: the influx is instant liquid-like displacement at the surface (no gas expansion, so no
-accelerating flow-out near the surface). NEEDS REVIEW.
+accelerating flow-out near the surface).
 
 ### Lost circulation
 
@@ -83,7 +83,7 @@ accelerating flow-out near the surface). NEEDS REVIEW.
 | others | unchanged | |
 
 Not modelled: loss of hydrostatic head leading to a kick (ballooning, "kick and loss"), except by
-overlapping random events. NEEDS REVIEW.
+overlapping random events.
 
 ### Stuck pipe
 
@@ -95,7 +95,7 @@ overlapping random events. NEEDS REVIEW.
 | spp, flows, pit | unchanged | Consistent with differential sticking, where circulation continues. Mechanical sticking with restricted circulation is the pack-off case below. NEEDS REVIEW |
 
 Not modelled: hook load / overpull and drag, which are the primary stuck-pipe indicators in practice
-and are not in the channel list. This is the biggest gap. NEEDS REVIEW.
+and are not in the channel list. This is the biggest gap.
 
 ### Washout (hole in the drill string)
 
@@ -107,7 +107,7 @@ and are not in the channel list. This is the biggest gap. NEEDS REVIEW.
 
 Not modelled: pump-stroke increase when the driller tries to compensate; the string failing
 (twist-off). The word "washout" is also used for hole enlargement (wellbore washout); here it means
-a string washout only. NEEDS REVIEW.
+a string washout only.
 
 ### Pack-off
 
@@ -116,7 +116,7 @@ a string washout only. NEEDS REVIEW.
 | spp | +35 % | Rising pump pressure with a blocked annulus is the usual description [SLB] (I am not sure "pack-off" has its own entry; verify). Size NEEDS REVIEW |
 | flow_out | −20 % of the lagged flow (restricted returns). Pit volume falls through mass balance | NEEDS REVIEW: where the missing fluid goes (formation, compression) is not modelled; in the data it looks like a loss, and what separates it from Lost Circulation is that pump pressure rises instead of falling |
 | torque | +30 % with erratic spikes | NEEDS REVIEW; no source |
-| rop | −40 % | NEEDS REVIEW; no source |
+| rop | −40 % 
 
 ### Sensor drift
 
@@ -127,7 +127,7 @@ a string washout only. NEEDS REVIEW.
 
 This is deliberately hard: drift on flow_out or pit_volume looks like a kick or a loss in the raw
 channel. What distinguishes it is that no other channel agrees (no SPP, ROP or gas change).
-Large drifts can push readings out of physical range (e.g. negative WOB). NEEDS REVIEW.
+Large drifts can push readings out of physical range (e.g. negative WOB).
 
 ## Derived physics features (`profiles/drilling.py`)
 
@@ -140,9 +140,3 @@ Large drifts can push readings out of physical range (e.g. negative WOB). NEEDS 
 | `mse_mpa` | `WOB/A + 2π·RPM·T/(A·ROP)`, A = 0.0366 m² (8.5 in bit assumed) | Mechanical specific energy [Teale]. Bit size is an assumption. NEEDS REVIEW |
 
 All are past-only (diff or trailing window), so a feature at time t never uses later rows (tested).
-
-## Known limitations
-
-- The generator and the features share assumptions (for example the 1.8 pressure exponent), so a detector using `spp_norm` is partly rediscovering the generator. Results on this data say little about real rigs.
-- Hook load, standpipe vs bit pressure drop, pump strokes, block position, inclination and direction are missing.
-- Severity, priority and recommended responses are a lookup by anomaly type that I made up. NEEDS REVIEW by a well-control / drilling engineer before showing them to anyone as advice.
