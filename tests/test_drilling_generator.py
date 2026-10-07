@@ -219,3 +219,15 @@ def test_physics_features_exist_and_are_past_only():
 def test_kick_shows_up_in_flow_delta_feature():
     df = add_profile_features(run([ev("Kick")]).assign(), DRILLING)
     assert df["flow_delta_lpm"].iloc[260:340].mean() > 100
+
+
+def test_committed_sample_matches_generator_and_shows_all_types():
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent / "data" / "sample" / "drilling"
+    sample = pd.read_csv(root / "drilling_data.csv")
+    events = pd.read_csv(root / "drilling_events.csv")
+    assert set(events["type"]) == set(DRILLING.anomaly_types)
+    assert sample["active_anomalies"].fillna("").str.contains(r"\|").any()
+    fresh, _ = generate_dataset(3, 1.0, 11, 4.0)
+    assert len(fresh) == len(sample)
+    assert np.allclose(fresh["pit_volume_m3"], sample["pit_volume_m3"], atol=1e-4)
