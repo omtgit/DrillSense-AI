@@ -6,7 +6,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
 ![Google Cloud](https://img.shields.io/badge/Google_Cloud-Cloud_Run-4285F4)
 ![BigQuery](https://img.shields.io/badge/BigQuery-Data_Warehouse-669DF6)
-![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-8E75B2)
+![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2)
 ![XGBoost](https://img.shields.io/badge/XGBoost-ML-green)
 ![RAPIDS](https://img.shields.io/badge/RAPIDS-cuDF-success)
 
@@ -22,7 +22,7 @@
 
 ## Overview
 
-DrillSense AI is a cloud-native, AI-powered oilfield monitoring platform that combines machine learning, GPU acceleration, Google Cloud, and Gemini 2.5 Flash to detect drilling anomalies, assess operational risk, and generate engineering recommendations. 
+DrillSense AI is a cloud-native, AI-powered oilfield monitoring platform that combines machine learning, GPU acceleration, Google Cloud, and Gemini Flash to detect drilling anomalies, assess operational risk, and generate engineering recommendations. 
 The platform demonstrates how modern AI can support production engineers through intelligent monitoring, predictive analytics, and cloud-scale decision intelligenc
 
 ---
@@ -48,7 +48,7 @@ The platform demonstrates how modern AI can support production engineers through
 | Frontend | Streamlit |
 | Data Visualization | Plotly |
 | Machine Learning | XGBoost, Isolation Forest |
-| Generative AI | Gemini 2.5 Flash |
+| Generative AI | Gemini Flash |
 | Cloud Platform | Google Cloud Platform (GCP) |
 | Data Warehouse | BigQuery |
 | Cloud Deployment | Cloud Run |
@@ -146,7 +146,7 @@ No cloud account or API key is needed. By default the app reads the committed sa
 | `LOCAL_DATA_PATH` | `data/sample` | A CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
 | `BIGQUERY_TABLE` | `<project>.drillsense.sensor_data` | Override the BigQuery table (only with `DATA_SOURCE=bigquery`) |
 | `GEMINI_API_KEY` | unset | Optional. Only used by "Rephrase with Gemini"; a key pasted in the sidebar takes precedence. The template report works without it |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used for rephrasing. Verify the name is still served before relying on it |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Default model for rephrasing; also editable in the sidebar. Not verified against a live key; a 404 shows a "try another model name" message |
 
 Run the tests with `pip install pytest && python -m pytest tests`.
 
