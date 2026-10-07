@@ -145,7 +145,10 @@ No cloud account or API key is needed. By default the app reads the committed sa
 | `DATA_SOURCE` | `local` | `local` reads CSV/parquet files; `bigquery` reads `<project>.drillsense.sensor_data` (optional, needs Google Cloud credentials) |
 | `LOCAL_DATA_PATH` | `data/sample` | A CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
 | `BIGQUERY_TABLE` | `<project>.drillsense.sensor_data` | Override the BigQuery table (only with `DATA_SOURCE=bigquery`) |
-| `GEMINI_API_KEY` | unset | Only needed for the "Generate AI Engineering Report" button; everything else works without it |
+| `GEMINI_API_KEY` | unset | Optional. Only used by "Rephrase with Gemini"; a key pasted in the sidebar takes precedence. The template report works without it |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Model used for rephrasing. Verify the name is still served before relying on it |
+
+Run the tests with `pip install pytest && python -m pytest tests`.
 
 To run on the full dataset after the pipeline above, set
 `LOCAL_DATA_PATH=data/processed/drillsense_processed_data.csv` (written by notebook 03).
