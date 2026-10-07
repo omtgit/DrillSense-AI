@@ -63,6 +63,7 @@ page = st.sidebar.radio(
         "Executive Dashboard",
         "Well Explorer",
         "AI Decision Center",
+        "Model Evaluation",
         "CPU vs GPU Benchmark",
         "About"
     ]
@@ -314,6 +315,16 @@ elif page == "AI Decision Center":
             st.subheader("Rephrased by Gemini")
             st.caption("Same facts as the template report; numbers were checked against it.")
             st.markdown(text)
+
+# ===================================================
+# Model Evaluation (reads docs/eval_results.json; no training here)
+# ===================================================
+
+elif page == "Model Evaluation":
+
+    import eval_page
+    eval_page.render(st)
+
 
 # ===================================================
 # GPU Performance
