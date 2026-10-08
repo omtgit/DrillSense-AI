@@ -149,7 +149,7 @@ No cloud account or API key is needed. By default the app reads the committed sa
 | `LOCAL_DATA_PATH` | `data/sample` | Production profile: a CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
 | `DRILLING_DATA_PATH` | `data/sample/drilling` | Drilling profile: a `drilling_data.csv` (or its directory), e.g. from `scripts/generate_drilling_data.py` |
 | `BIGQUERY_TABLE` | `<project>.drillsense.sensor_data` | Override the BigQuery table (only with `DATA_SOURCE=bigquery`) |
-| `GEMINI_API_KEY` | unset | Optional. Only used by "Rephrase with Gemini"; a key pasted in the sidebar takes precedence. The template report works without it |
+| `GEMINI_API_KEY` | unset | Optional. Only used by the optional AI assistant; a key pasted in the sidebar takes precedence. The template report works without it |
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Default model for rephrasing; also editable in the sidebar. Not verified against a live key; a 404 shows a "try another model name" message |
 
 Run the tests with `pip install pytest && python -m pytest tests`.

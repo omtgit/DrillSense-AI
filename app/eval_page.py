@@ -5,6 +5,9 @@ from pathlib import Path
 import pandas as pd
 import plotly.express as px
 
+from labels import feature_label
+from profiles import get_profile
+
 RESULTS = Path(__file__).resolve().parent.parent / "docs" / "eval_results.json"
 
 LABELS = {
@@ -16,6 +19,8 @@ LABELS = {
 }
 MODES = {"wells": "Well-held-out (5-fold CV grouped by well)",
          "time": "Time-held-out (first 70% train, last 30% test)"}
+FEATURE_SETS = {"raw": "Raw sensors only", "raw+physics": "Raw + physics signals",
+                "raw+physics+context": "Raw + physics + recent history"}
 KIND_NAMES = {"iforest": "Isolation Forest", "xgb_bin": "XGBoost binary", "xgb_multi": "XGBoost multiclass"}
 
 
@@ -68,10 +73,46 @@ def ablation_frame(res, mode, budget):
         for fs in ("raw", "raw+physics", "raw+physics+context"):
             e = res["summary"][mode][f"{kind}|{fs}"]
             b = e["by_budget"][budget]
-            rows.append({"Model": name, "Features": fs, "# feats": res["config"]["feature_counts"][fs],
+            rows.append({"Model": name, "Inputs": FEATURE_SETS[fs], "Number of inputs": res["config"]["feature_counts"][fs],
                          "Row PR-AUC": _ms(e["row"]["pr_auc"]), "Events detected": _ms(b["detect_share"], 0, True),
                          "False alarms / well-day": _ms(b["fa_per_well_day"], 2)})
     return pd.DataFrame(rows)
+
+
+GUIDE = [
+    ("Row PR-AUC", "How well a method puts the truly abnormal minutes above the normal ones when abnormal "
+                   "minutes are rare (1.0 is perfect; a method with no skill scores about the share of abnormal minutes)."),
+    ("Row AUROC", "The chance that a randomly chosen abnormal minute scores higher than a randomly chosen "
+                  "normal one (0.5 is a coin flip, 1.0 is perfect)."),
+    ("Events detected", "The share of simulated incidents where the method raised at least one alarm during the "
+                        "incident or shortly after it."),
+    ("False alarms / well-day", "How many alarms you would get on one well in one day when nothing is wrong; "
+                                "lower means fewer needless call-outs."),
+    ("Median delay (min)", "For the incidents that were caught, the typical number of minutes between the "
+                           "incident starting and the first alarm (half were quicker, half slower)."),
+]
+
+
+def run_summary_frame(cfg, mode, budget):
+    """Plain-language protocol table; every number is read from the results file."""
+    split = {
+        "wells": f"Each test well is held out: models are trained on other wells and scored on a well they have "
+                 f"never seen ({cfg['outer_folds']}-fold, grouped by well).",
+        "time": f"Models are trained on the first {cfg['time_cut']:.0%} of every well and scored on the last "
+                f"{1 - cfg['time_cut']:.0%}.",
+    }[mode]
+    return pd.DataFrame([
+        {"Topic": "How the data was split", "In plain words": split},
+        {"Topic": "False-alarm budget", "In plain words":
+            f"Each method's alarm threshold is set on training data only, so that it stays within about "
+            f"{float(budget):g} false alarm per well per day. Test wells never influenced a threshold."},
+        {"Topic": "When an incident counts as caught", "In plain words":
+            f"At least one alarm between the start of the incident and {cfg['grace_min']} minutes after it ends. "
+            f"Alarms less than {cfg['merge_gap_min']} minutes apart count as one."},
+        {"Topic": "Where the data comes from", "In plain words":
+            "A seeded simulator, not real rigs. The results compare methods with each other; they say little "
+            "about field performance."},
+    ])
 
 
 def render(st):
@@ -87,16 +128,24 @@ def render(st):
         "real rigs. They compare methods against each other on this simulator; they do not predict real-world "
         "performance. See docs/EVAL.md, Limitations."
     )
-    st.caption(
-        f"{len(cfg['seeds'])} seeds x {cfg['wells']} wells x {cfg['days']:g} days at 1-minute sampling "
-        f"({cfg['rows_total']:,} rows, {cfg['events_total']} injected events in total). Mean ± std over seeds. "
-        "Thresholds were chosen on training data only; nothing was tuned on test wells."
-    )
+    with st.expander("How to read this page: five numbers, one sentence each"):
+        for name, sentence in GUIDE:
+            st.markdown(f"**{name}.** {sentence}")
+
     budgets = [str(b) for b in cfg["budgets"]]
     c1, c2 = st.columns(2)
     mode = c1.radio("Split", list(MODES), format_func=MODES.get, horizontal=False)
     budget = c2.radio("False-alarm budget used to set thresholds (per well-day, on training data)", budgets,
                       index=budgets.index(str(cfg["primary_budget"])))
+
+    st.subheader("How this evaluation was run")
+    t1, t2, t3, t4 = st.columns(4)
+    t1.metric("Repeats (random seeds)", len(cfg["seeds"]))
+    t2.metric("Wells per repeat", cfg["wells"])
+    t3.metric("Days per well", f"{cfg['days']:g}")
+    t4.metric("Simulated incidents in total", cfg["events_total"])
+    st.table(run_summary_frame(cfg, mode, budget).set_index("Topic"))
+    st.caption("Tables show the mean ± the spread (standard deviation) over the repeats.")
 
     st.subheader("Headline comparison")
     st.dataframe(headline_frame(res, mode, budget), hide_index=True, width="stretch")
@@ -111,29 +160,36 @@ def render(st):
     fig.update_layout(showlegend=False, yaxis_range=[0, 105])
     st.plotly_chart(fig, width="stretch")
 
-    st.subheader("Where does it fail? Detection by anomaly type and event size")
-    st.caption("Pooled over seeds; (detected/events). Small events are the hard cases. event_scale is the event's "
+    st.subheader("Where does it fail? Detection by anomaly type and incident size")
+    st.caption("Pooled over seeds; (detected/events). Small events are the hard cases. Event size is the incident's "
                "peak strength, 1.0 = the full effect listed in docs/PHYSICS.md.")
     st.markdown("**By anomaly type**")
     st.dataframe(breakdown_frame(res, mode, budget, "by_type"), hide_index=True, width="stretch")
-    st.markdown("**By event_scale bin**")
+    st.markdown("**By event size**")
     st.dataframe(breakdown_frame(res, mode, budget, "by_scale"), hide_index=True, width="stretch")
 
     st.subheader("Feature ablation")
     st.dataframe(ablation_frame(res, mode, budget), hide_index=True, width="stretch")
 
-    st.subheader("What XGBoost uses (TreeSHAP, well-held-out folds)")
+    st.subheader("What the XGBoost model pays attention to (SHAP values, on wells it had not seen)")
     multi = res.get("shap", {}).get("multiclass", {})
     if multi:
         typ = st.selectbox("Anomaly type", list(multi))
+        profile = get_profile("drilling")
         top = pd.DataFrame(multi[typ]["top"])
-        fig = px.bar(top.iloc[::-1], x="mean_abs_shap", y="feature", orientation="h",
-                     labels={"mean_abs_shap": "mean |SHAP| (log-odds)", "feature": ""})
+        top["Feature"] = top["feature"].map(lambda f: feature_label(f, profile))
+        fig = px.bar(top.iloc[::-1], x="mean_abs_shap", y="Feature", orientation="h",
+                     custom_data=["feature"],
+                     labels={"mean_abs_shap": "How much this feature moved the prediction", "Feature": ""})
+        fig.update_traces(hovertemplate="%{y}<br>moved the prediction by %{x:.2f}<br>technical name: %{customdata[0]}"
+                                        "<extra></extra>")
         st.plotly_chart(fig, width="stretch")
         fam = multi[typ]["family_share"]
-        st.caption(f"Share of attribution by feature family: raw {fam['raw']:.0%}, physics {fam['physics']:.0%}, "
-                   f"rolling context {fam['context']:.0%}. Names ending __mean15 / __std15 / __dev180 / __d5 are "
-                   "past-only rolling features of the named channel.")
-    with st.expander("Run configuration"):
+        st.caption(f"Share of the model's attention by kind of signal: raw sensor readings {fam['raw']:.0%}, "
+                   f"derived physics signals {fam['physics']:.0%}, recent history of a signal {fam['context']:.0%}. "
+                   "Longer bars mean the feature pushed the prediction harder (mean absolute SHAP value, in "
+                   "log-odds, per feature). Only past readings are used, never future ones.")
+    with st.expander("Technical details (for reproducibility)"):
         st.json({k: cfg[k] for k in ("wells", "days", "events_per_day", "seeds", "time_cut", "outer_folds",
-                                       "inner_folds", "merge_gap_min", "grace_min", "xgb_rounds", "versions")})
+                                       "inner_folds", "merge_gap_min", "grace_min", "xgb_rounds", "versions")},
+                expanded=False)

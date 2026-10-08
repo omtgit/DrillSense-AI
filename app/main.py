@@ -11,34 +11,58 @@ import drilling_pages
 from data_source import data_source_name, load_drilling, load_sensor_data
 from gemini_utils import model_name
 from profiles import get_profile
+from drilling_pages import HELP_F1, HELP_PRECISION, HELP_RECALL
+from ui import DOCS_URL, REPO_URL, SIM_NOTICE, show_error
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 HELDOUT_METRICS = Path(__file__).resolve().parent.parent / "docs" / "heldout_metrics.json"
 
 st.set_page_config(
-    page_title="DrillSense AI",
-    page_icon=str(ASSETS_DIR / "logo.png"),
+    page_title="DrillSense AI | Drilling anomaly detection demo",
+    page_icon=str(ASSETS_DIR / "logo.png") if (ASSETS_DIR / "logo.png").is_file() else "⛽",
     layout="wide"
 )
 
-@st.cache_data
+@st.cache_data(show_spinner="Loading the production demo wells...")
 def load_production_data():
     return load_sensor_data()
 
 
-@st.cache_data
+@st.cache_data(show_spinner="Loading the demo wells and scoring them...")
 def load_drilling_scored():
     """Sample telemetry with the detector's predictions. The detector never saw these wells."""
     return get_detector().predict(detector.prepare(load_drilling(), get_profile("drilling")))
 
 
-@st.cache_resource(show_spinner="Training the drilling detector on generated wells (about 10 s, once per server start)...")
+@st.cache_resource(show_spinner="Teaching the detector on simulated wells...")
 def get_detector():
     return detector.train_detector(get_profile("drilling"))
 
 
-@st.cache_data
+@st.cache_resource(show_spinner=False)
+def _startup_state():
+    """Remembers, per server process, whether the one-off set-up has finished."""
+    return {"ready": False}
+
+
+def ensure_ready():
+    """Explain the slow first start once, in plain words, instead of showing a bare spinner."""
+    state = _startup_state()
+    if state["ready"]:
+        return
+    with st.status(
+        "Getting the demo ready. This happens once after the server starts and takes about "
+        "15 seconds. The detector is learning from simulated wells, then scoring the demo wells.",
+        expanded=True,
+    ) as status:
+        get_detector()
+        load_drilling_scored()
+        status.update(label="Demo ready.", state="complete", expanded=False)
+    state["ready"] = True
+
+
+@st.cache_data(show_spinner="Loading the saved held-out results...")
 def load_heldout_metrics():
     try:
         return json.loads(HELDOUT_METRICS.read_text())
@@ -48,6 +72,7 @@ def load_heldout_metrics():
 
 st.title("⛽ DrillSense AI")
 st.subheader("GPU-Benchmarked Decision Intelligence for Oilfield Monitoring")
+st.caption(f"⚠️ {SIM_NOTICE}")
 
 # ------------------------
 # Sidebar
@@ -75,18 +100,22 @@ page = st.sidebar.radio(
     ]
 )
 
-if profile_name == "drilling":
-    st.sidebar.caption("Data: committed drilling sample (local files; BigQuery serves the production profile only)")
+if profile_name == "drilling" or data_source_name() == "local":
+    st.sidebar.caption("Data: built-in simulated demo wells")
 else:
-    st.sidebar.caption(f"Data source: {data_source_name()}")
+    st.sidebar.caption("Data: simulated wells loaded from a connected BigQuery table")
 
-with st.sidebar.expander("Optional: Gemini rephrasing"):
+with st.sidebar.expander("AI assistant (optional)"):
     st.caption(
-        "Reports work without a key. A key lets Gemini rephrase the report text; it may not "
-        "add facts. The key stays in this browser session only and is never stored or logged."
+        "The full report works without a key. Add your own free Google AI Studio key to get the same facts "
+        "written for a specific reader, in English or Hindi, and to ask questions about this event. "
+        "Detection is done by the model; the assistant only helps you communicate it. It cannot invent "
+        "numbers: everything is checked against the report. Your key stays in this browser session and is "
+        "never stored or logged."
     )
-    st.text_input("Gemini API key", type="password", key="gemini_api_key")
-    st.text_input("Gemini model", value=model_name(), key="gemini_model")
+    st.markdown("[Get a free key from Google AI Studio](https://aistudio.google.com/apikey)")
+    st.text_input("Google AI Studio key", type="password", key="gemini_api_key")
+    st.text_input("Model name (advanced)", value=model_name(), key="gemini_model")
 
 # ===================================================
 # Data for the three profile-aware pages
@@ -96,10 +125,11 @@ PROFILE_PAGES = ("Executive Dashboard", "Well Explorer", "AI Decision Center")
 
 if page in PROFILE_PAGES and profile_name == "drilling":
     try:
+        ensure_ready()
         scored = load_drilling_scored()
         det = get_detector()
     except Exception as exc:
-        st.error(f"Could not load drilling data or train the detector: {type(exc).__name__}: {exc}")
+        show_error("the demo wells could not be loaded or scored", exc)
         st.stop()
     if page == "Executive Dashboard":
         drilling_pages.render_dashboard(scored, det)
@@ -113,7 +143,7 @@ if page in PROFILE_PAGES:
     try:
         df = load_production_data()
     except Exception as exc:
-        st.error(f"Could not load data: {type(exc).__name__}: {exc}")
+        show_error("the demo wells could not be loaded", exc)
         st.stop()
 
 # ===================================================
@@ -170,9 +200,9 @@ if page == "Executive Dashboard":
 
     if hm:
         h1,h2,h3 = st.columns(3)
-        h1.metric("Precision",f"{hm['precision']:.2f}")
-        h2.metric("Recall",f"{hm['recall']:.2f}")
-        h3.metric("F1",f"{hm['f1']:.2f}")
+        h1.metric("Precision",f"{hm['precision']:.2f}",help=HELP_PRECISION)
+        h2.metric("Recall",f"{hm['recall']:.2f}",help=HELP_RECALL)
+        h3.metric("F1",f"{hm['f1']:.2f}",help=HELP_F1)
         st.caption(
             f"Anomaly vs normal, scored on {len(hm['test_wells'])} wells "
             f"({hm['test_rows']:,} rows, {hm['test_anomaly_rows']:,} injected anomaly rows) "
@@ -199,7 +229,7 @@ if page == "Executive Dashboard":
 
     Predicted Issue: {highest['predicted_anomaly']}
 
-    Risk Score: {highest['predicted_risk_score']}
+    Risk Score (0 to 100): {highest['predicted_risk_score']}
 
     Severity (ground truth): {highest['severity']}
     """
@@ -222,7 +252,8 @@ if page == "Executive Dashboard":
         chart,
         x="predicted_anomaly",
         y="Count",
-        title="Model-predicted anomaly distribution (all rows, including training rows)"
+        title="Model-predicted anomaly distribution (all rows, including training rows)",
+        labels={"predicted_anomaly": "Predicted issue", "Count": "Number of rows"}
     )
 
     st.plotly_chart(fig,width="stretch")
@@ -235,6 +266,8 @@ elif page == "Well Explorer":
 
     wells = sorted(df["well_id"].unique())
 
+    PROD_LABELS = {"timestamp": "Time", **get_profile("production").channel_labels}
+
     selected = st.selectbox(
         "Select Well",
         wells
@@ -246,7 +279,8 @@ elif page == "Well Explorer":
         temp,
         x="timestamp",
         y="pressure_psi",
-        title="Pressure"
+        title="Pressure",
+        labels=PROD_LABELS
     )
 
     st.plotly_chart(fig1,width="stretch")
@@ -255,7 +289,8 @@ elif page == "Well Explorer":
         temp,
         x="timestamp",
         y="flow_rate_bpd",
-        title="Flow Rate"
+        title="Flow Rate",
+        labels=PROD_LABELS
     )
 
     st.plotly_chart(fig2,width="stretch")
@@ -264,7 +299,8 @@ elif page == "Well Explorer":
         temp,
         x="timestamp",
         y="temperature_c",
-        title="Temperature"
+        title="Temperature",
+        labels=PROD_LABELS
     )
 
     st.plotly_chart(fig3,width="stretch")
@@ -273,7 +309,8 @@ elif page == "Well Explorer":
         temp,
         x="timestamp",
         y="vibration",
-        title="Vibration"
+        title="Vibration",
+        labels=PROD_LABELS
     )
 
     st.plotly_chart(fig4,width="stretch")
@@ -289,8 +326,7 @@ elif page == "AI Decision Center":
     st.caption(
         "The table ranks rows by the XGBoost risk score (ties: most recent first). "
         "Severity and recommended response are looked up from the injected ground-truth "
-        "anomaly type, not predicted. Gemini is only called when you press the "
-        "report button below."
+        "anomaly type, not predicted. The optional AI assistant below is only called when you press a button."
     )
 
     top_risk = rank_by_risk(df).head(10)
@@ -306,9 +342,12 @@ elif page == "AI Decision Center":
                 "recommended_response"
             ]
         ].rename(columns={
-            "severity": "severity (ground truth)",
-            "recommended_response": "recommended_response (ground truth)",
+            "well_id": "Well", "timestamp": "Time", "predicted_anomaly": "Predicted issue",
+            "predicted_risk_score": "Risk score",
+            "severity": "Severity (ground truth)",
+            "recommended_response": "Recommended response (ground truth)",
         }),
+        hide_index=True,
         width="stretch"
     )
 
@@ -402,6 +441,15 @@ elif page == "About":
 
     st.markdown("""
 
+### Learn more
+
+- [Source code on GitHub]({repo})
+- [Physics of the simulated rig signals (PHYSICS.md)]({docs}/PHYSICS.md)
+- [How the models were evaluated (EVAL.md)]({docs}/EVAL.md)
+- [CPU vs GPU benchmark notes (BENCHMARKS.md)]({docs}/BENCHMARKS.md)
+
+All data in this demo is simulated. It is an educational project, not a tool for operational decisions.
+
 ### Technologies
 
 - Google Cloud Storage
@@ -437,5 +485,6 @@ AI Decision Intelligence
       ▼
 
 Cloud Deployment
+```
 
-""")
+""".replace("{repo}", REPO_URL).replace("{docs}", DOCS_URL))
