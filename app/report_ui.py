@@ -3,6 +3,7 @@ import streamlit as st
 
 from assistant import INSTANT_LABEL, SUGGESTED, gemini_label, instant_answer
 from gemini_utils import AUDIENCES, LANGUAGES, answer_question, has_key, model_name, write_for
+from waiting import run_with_status
 from report import build_finding, render_derived_facts, render_report
 
 
@@ -54,8 +55,8 @@ def assistant_block(template, finding):
         audience = c1.selectbox("Write it for", list(AUDIENCES))
         language = c2.selectbox("Language", LANGUAGES)
         if st.button("Generate"):
-            with st.spinner("Writing it up..."):
-                text, warning = write_for(template, audience, language, api_key, model)
+            text, warning = run_with_status(write_for, template, audience, language, api_key, model,
+                                            fallback_text="Writing it up...")
             st.session_state["assistant_written"] = (event_id, audience, language, text, warning)
         written = st.session_state.get("assistant_written")
         if written and written[0] == event_id:
@@ -81,8 +82,8 @@ def assistant_block(template, finding):
         question = st.text_input("Or ask your own question", key="assistant_question",
                                  placeholder="For example: is the pump the likely cause?")
         if st.button("Ask") and question.strip():
-            with st.spinner("Looking it up in the report..."):
-                answer, warning = answer_question(facts, question, language, api_key, model)
+            answer, warning = run_with_status(answer_question, facts, question, language, api_key, model,
+                                              fallback_text="Looking it up in the report...")
             used = getattr(answer, "model", "") or (model or "").strip() or model_name()
             st.session_state["assistant_answer"] = (event_id, question, answer, warning, gemini_label(used))
     asked = st.session_state.get("assistant_answer")
