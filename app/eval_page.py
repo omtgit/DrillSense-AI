@@ -99,7 +99,7 @@ def render(st):
                       index=budgets.index(str(cfg["primary_budget"])))
 
     st.subheader("Headline comparison")
-    st.dataframe(headline_frame(res, mode, budget), hide_index=True, use_container_width=True)
+    st.dataframe(headline_frame(res, mode, budget), hide_index=True, width="stretch")
     st.caption("Row PR-AUC / AUROC are threshold-free. Events detected, false alarms and delay are event-level at the "
                "threshold chosen on training data; delay is the median over detected events only.")
 
@@ -109,18 +109,18 @@ def render(st):
     fig = px.scatter(chart, x="False alarms / well-day", y="Events detected (%)", color="Method", text="Method")
     fig.update_traces(marker_size=14, textposition="top center")
     fig.update_layout(showlegend=False, yaxis_range=[0, 105])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.subheader("Where does it fail? Detection by anomaly type and event size")
     st.caption("Pooled over seeds; (detected/events). Small events are the hard cases. event_scale is the event's "
                "peak strength, 1.0 = the full effect listed in docs/PHYSICS.md.")
     st.markdown("**By anomaly type**")
-    st.dataframe(breakdown_frame(res, mode, budget, "by_type"), hide_index=True, use_container_width=True)
+    st.dataframe(breakdown_frame(res, mode, budget, "by_type"), hide_index=True, width="stretch")
     st.markdown("**By event_scale bin**")
-    st.dataframe(breakdown_frame(res, mode, budget, "by_scale"), hide_index=True, use_container_width=True)
+    st.dataframe(breakdown_frame(res, mode, budget, "by_scale"), hide_index=True, width="stretch")
 
     st.subheader("Feature ablation")
-    st.dataframe(ablation_frame(res, mode, budget), hide_index=True, use_container_width=True)
+    st.dataframe(ablation_frame(res, mode, budget), hide_index=True, width="stretch")
 
     st.subheader("What XGBoost uses (TreeSHAP, well-held-out folds)")
     multi = res.get("shap", {}).get("multiclass", {})
@@ -129,7 +129,7 @@ def render(st):
         top = pd.DataFrame(multi[typ]["top"])
         fig = px.bar(top.iloc[::-1], x="mean_abs_shap", y="feature", orientation="h",
                      labels={"mean_abs_shap": "mean |SHAP| (log-odds)", "feature": ""})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         fam = multi[typ]["family_share"]
         st.caption(f"Share of attribution by feature family: raw {fam['raw']:.0%}, physics {fam['physics']:.0%}, "
                    f"rolling context {fam['context']:.0%}. Names ending __mean15 / __std15 / __dev180 / __d5 are "

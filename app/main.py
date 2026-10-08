@@ -188,7 +188,7 @@ if page == "Executive Dashboard":
         title="Model-predicted anomaly distribution (all rows, including training rows)"
     )
 
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,width="stretch")
 
 # ===================================================
 # Well Explorer
@@ -212,7 +212,7 @@ elif page == "Well Explorer":
         title="Pressure"
     )
 
-    st.plotly_chart(fig1,use_container_width=True)
+    st.plotly_chart(fig1,width="stretch")
 
     fig2 = px.line(
         temp,
@@ -221,7 +221,7 @@ elif page == "Well Explorer":
         title="Flow Rate"
     )
 
-    st.plotly_chart(fig2,use_container_width=True)
+    st.plotly_chart(fig2,width="stretch")
 
     fig3 = px.line(
         temp,
@@ -230,7 +230,7 @@ elif page == "Well Explorer":
         title="Temperature"
     )
 
-    st.plotly_chart(fig3,use_container_width=True)
+    st.plotly_chart(fig3,width="stretch")
 
     fig4 = px.line(
         temp,
@@ -239,7 +239,7 @@ elif page == "Well Explorer":
         title="Vibration"
     )
 
-    st.plotly_chart(fig4,use_container_width=True)
+    st.plotly_chart(fig4,width="stretch")
 
 # ===================================================
 # AI Decision Center
@@ -272,7 +272,7 @@ elif page == "AI Decision Center":
             "severity": "severity (ground truth)",
             "recommended_response": "recommended_response (ground truth)",
         }),
-        use_container_width=True
+        width="stretch"
     )
 
     selected = st.selectbox(
