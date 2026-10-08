@@ -3,7 +3,7 @@ import streamlit as st
 
 REPO_URL = "https://github.com/omtgit/DrillSense-AI"
 DOCS_URL = f"{REPO_URL}/blob/main/docs"
-SIM_NOTICE = "Simulated data. Educational demo, not for operational decisions."
+FOOTER = "Demo with simulated data. Not for operational use."
 
 
 def show_error(what, exc):
@@ -12,3 +12,8 @@ def show_error(what, exc):
              "and share them with the maintainer.")
     with st.expander("Technical details"):
         st.code(f"{type(exc).__name__}: {exc}")
+
+
+def footer():
+    """One short grey line at the very bottom of every page."""
+    st.caption(FOOTER)
