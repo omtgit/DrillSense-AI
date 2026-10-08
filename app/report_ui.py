@@ -17,6 +17,15 @@ def rank_by_risk(frame):
     )
 
 
+def show_warning(warning):
+    """Friendly message for visitors; the technical text, if any, stays in a collapsed expander."""
+    st.warning(str(warning))
+    detail = getattr(warning, "detail", "")
+    if detail:
+        with st.expander("Technical details"):
+            st.code(detail)
+
+
 def report_section(df, row, profile, rules_from_profile=False):
     finding = build_finding(df, row, profile=profile, rules_from_profile=rules_from_profile)
     template = render_report(finding, profile)
@@ -53,7 +62,7 @@ def assistant_block(template, finding):
     if written and written[0] == event_id:
         _, aud, lang, text, warning = written
         if warning:
-            st.warning(warning)
+            show_warning(warning)
         else:
             st.markdown(f"**{aud} ({lang})**")
             st.markdown(text)
@@ -69,7 +78,7 @@ def assistant_block(template, finding):
     if asked and asked[0] == event_id:
         _, q, answer, warning = asked
         if warning:
-            st.warning(warning)
+            show_warning(warning)
         else:
             st.markdown(f"*{q}*")
             st.markdown(answer)
