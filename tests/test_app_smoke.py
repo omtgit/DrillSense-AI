@@ -82,13 +82,6 @@ def test_assistant_with_key_shows_controls_and_falls_back_on_bad_output(monkeypa
     assert any("showing the template report" in w.value or "Gemini call failed" in w.value for w in at.warning)
 
 
-@pytest.mark.parametrize("page", PAGES)
-def test_every_page_shows_the_simulated_data_notice(app, page):
-    app.sidebar.selectbox[0].set_value("Drilling")
-    app.sidebar.radio[0].set_value(page).run()
-    assert any("Simulated data. Educational demo, not for operational decisions." in c.value for c in app.caption)
-
-
 def test_sidebar_data_line_is_plain_and_about_links(app):
     app.sidebar.selectbox[0].set_value("Drilling")
     app.sidebar.radio[0].set_value("About").run()
@@ -122,3 +115,24 @@ def test_decision_center_table_has_plain_headers(app, profile):
     cols = list(app.dataframe[0].value.columns)
     assert not [c for c in cols if "_" in c], cols
     assert "Well" in cols and "Predicted issue" in cols
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_footer_on_every_page_and_no_top_notice(app, page):
+    app.sidebar.selectbox[0].set_value("Drilling")
+    app.sidebar.radio[0].set_value(page).run()
+    assert not app.exception
+    captions = [c.value for c in app.main.caption]
+    assert captions[-1] == "Demo with simulated data. Not for operational use."
+    assert not any("Educational demo" in c for c in captions)
+    if page == "Executive Dashboard":
+        assert not any("seed" in c.lower() or "P(Normal)" in c for c in captions)
+        assert not any("ground-truth severity" in m.label for m in app.metric)
+
+
+def test_model_evaluation_has_short_caption_and_no_warning(app):
+    app.sidebar.selectbox[0].set_value("Drilling")
+    app.sidebar.radio[0].set_value("Model Evaluation").run()
+    assert not app.warning
+    assert ("Results come from simulated wells, so they compare methods with each other, "
+            "not with real rigs.") in [c.value for c in app.main.caption][:2]

@@ -44,3 +44,11 @@ def test_every_feature_in_the_results_file_gets_a_label():
         for item in v["top"]:
             label = feature_label(item["feature"], p)
             assert "_" not in label and "__" not in label, label
+
+
+def test_startup_status_is_short_and_get_detector_has_no_second_spinner():
+    src = (APP / "main.py").read_text()
+    m = re.search(r'st\.status\("([^"]+)"', src)
+    assert m and len(m.group(1)) <= 60, m and m.group(1)
+    assert re.search(r"@st\.cache_resource\(show_spinner=False\)[^\n]*\ndef get_detector", src)
+    assert re.search(r"@st\.cache_data\(show_spinner=False\)[^\n]*\ndef load_drilling_scored", src)
