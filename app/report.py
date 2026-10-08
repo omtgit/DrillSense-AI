@@ -60,12 +60,13 @@ def build_finding(df, row, k=3, profile=None, rules_from_profile=False):
     for the PREDICTED class, so a report never leans on ground-truth labels.
     """
     prof = profile or get_profile(DEFAULT_PROFILE)
-    severity, response, source = str(row["severity"]), str(row["recommended_response"]), GROUND_TRUTH_SOURCE
     if rules_from_profile:
         rule = prof.severity_rules.get(str(row["predicted_anomaly"]))
         severity = rule.severity if rule else "Unrated"
         response = rule.response if rule else "No rule defined for this class"
         source = PROFILE_RULE_SOURCE
+    else:
+        severity, response, source = str(row["severity"]), str(row["recommended_response"]), GROUND_TRUTH_SOURCE
     well = df[df["well_id"] == row["well_id"]].sort_values("timestamp").reset_index(drop=True)
     flagged = well["predicted_anomaly"].ne("Normal")
     run_id = (flagged != flagged.shift()).cumsum()

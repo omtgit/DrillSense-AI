@@ -3,9 +3,15 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from pathlib import Path
-from data_source import data_source_name, load_sensor_data
-from gemini_utils import model_name, rephrase_report
-from report import build_finding, render_report
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import detector
+import drilling_pages
+from data_source import data_source_name, load_drilling, load_sensor_data
+from gemini_utils import model_name
+from profiles import get_profile
+from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 HELDOUT_METRICS = Path(__file__).resolve().parent.parent / "docs" / "heldout_metrics.json"
@@ -17,27 +23,19 @@ st.set_page_config(
 )
 
 @st.cache_data
-def load_data():
+def load_production_data():
     return load_sensor_data()
 
-try:
-    df = load_data()
-except Exception as exc:
-    st.error(f"Could not load data: {type(exc).__name__}: {exc}")
-    st.stop()
+
+@st.cache_data
+def load_drilling_scored():
+    """Sample telemetry with the detector's predictions. The detector never saw these wells."""
+    return get_detector().predict(detector.prepare(load_drilling(), get_profile("drilling")))
 
 
-def rank_by_risk(frame):
-    """Highest predicted risk first; ties go to the most recent row, then the lowest well id.
-
-    Many rows share the maximum score (the score is a lookup on predicted class), so
-    sorting on the score alone gives an arbitrary pick.
-    """
-    return frame.sort_values(
-        ["predicted_risk_score", "timestamp", "well_id"],
-        ascending=[False, False, True],
-        kind="mergesort",
-    )
+@st.cache_resource(show_spinner="Training the drilling detector on generated wells (about 10 s, once per server start)...")
+def get_detector():
+    return detector.train_detector(get_profile("drilling"))
 
 
 @st.cache_data
@@ -57,6 +55,14 @@ st.subheader("GPU-Benchmarked Decision Intelligence for Oilfield Monitoring")
 
 st.sidebar.title("Navigation")
 
+profile_label = st.sidebar.selectbox(
+    "Domain profile",
+    ["Drilling", "Production"],
+    help="Drilling: rig channels (WOB, SPP, flow in/out, pit volume...) from the seeded drilling "
+         "generator. Production: the original production-style synthetic dataset.",
+)
+profile_name = profile_label.lower()
+
 page = st.sidebar.radio(
     "Select Page",
     [
@@ -69,7 +75,10 @@ page = st.sidebar.radio(
     ]
 )
 
-st.sidebar.caption(f"Data source: {data_source_name()}")
+if profile_name == "drilling":
+    st.sidebar.caption("Data: committed drilling sample (local files; BigQuery serves the production profile only)")
+else:
+    st.sidebar.caption(f"Data source: {data_source_name()}")
 
 with st.sidebar.expander("Optional: Gemini rephrasing"):
     st.caption(
@@ -80,7 +89,35 @@ with st.sidebar.expander("Optional: Gemini rephrasing"):
     st.text_input("Gemini model", value=model_name(), key="gemini_model")
 
 # ===================================================
-# Executive Dashboard
+# Data for the three profile-aware pages
+# ===================================================
+
+PROFILE_PAGES = ("Executive Dashboard", "Well Explorer", "AI Decision Center")
+
+if page in PROFILE_PAGES and profile_name == "drilling":
+    try:
+        scored = load_drilling_scored()
+        det = get_detector()
+    except Exception as exc:
+        st.error(f"Could not load drilling data or train the detector: {type(exc).__name__}: {exc}")
+        st.stop()
+    if page == "Executive Dashboard":
+        drilling_pages.render_dashboard(scored, det)
+    elif page == "Well Explorer":
+        drilling_pages.render_explorer(scored, det.profile)
+    else:
+        drilling_pages.render_decision_center(scored, det)
+    st.stop()
+
+if page in PROFILE_PAGES:
+    try:
+        df = load_production_data()
+    except Exception as exc:
+        st.error(f"Could not load data: {type(exc).__name__}: {exc}")
+        st.stop()
+
+# ===================================================
+# Executive Dashboard (production profile)
 # ===================================================
 
 if page == "Executive Dashboard":
@@ -295,26 +332,7 @@ elif page == "AI Decision Center":
     st.write(f"**Recommended Response (ground truth)** : {row['recommended_response']}")
     
 
-    finding = build_finding(df, row)
-    template = render_report(finding)
-
-    st.subheader("Engineering Report")
-    st.caption("Built from the detected event by a fixed template; no API involved.")
-    st.markdown(template)
-
-    if st.button("Rephrase with Gemini"):
-        with st.spinner("Rephrasing..."):
-            text, warning = rephrase_report(
-                template,
-                st.session_state.get("gemini_api_key") or None,
-                st.session_state.get("gemini_model") or None,
-            )
-        if warning:
-            st.warning(warning)
-        else:
-            st.subheader("Rephrased by Gemini")
-            st.caption("Same facts as the template report; numbers were checked against it.")
-            st.markdown(text)
+    report_section(df, row, get_profile("production"))
 
 # ===================================================
 # Model Evaluation (reads docs/eval_results.json; no training here)

@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import xgboost as xgb
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -73,7 +72,7 @@ class Detector:
         names = np.array(self.classes, dtype=object)
         out = prepared.copy()
         out["predicted_anomaly"] = np.where(flagged, names[best], "Normal")
-        out["predicted_risk_score"] = np.round(100.0 * (1.0 - p_normal), 1)
+        out["predicted_risk_score"] = np.round(100.0 * (1.0 - p_normal.astype(np.float64)), 1)
         rules = self.profile.severity_rules
         out["predicted_severity"] = out["predicted_anomaly"].map(lambda c: rules[c].severity if c in rules else "None")
         out["predicted_response"] = out["predicted_anomaly"].map(lambda c: rules[c].response if c in rules else "No action")
