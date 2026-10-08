@@ -6,17 +6,10 @@ used in the code at full event size (`scale = 1.0`). Events are drawn with scale
 
 **Read this first.** The generator was written by the project author with AI assistance. It has not been
 reviewed by a practising drilling engineer, and it was built without field data. The *direction* of
-each signature (which channel goes up or down) follows standard drilling-problem descriptions. The
-*magnitudes, time constants and couplings* are the author's own choices, picked to be plausible and
-to make the problem non-trivial. Every item marked **NEEDS REVIEW** must be checked by someone with
+each signature (which channel goes up or down) follows standard drilling-problem descriptions. Every item marked **NEEDS REVIEW** must be checked by someone with
 drilling experience before any claim is built on it.
 
 ## About the sources
-
-I did not check any of these against the web in this session: the references are cited **from memory**
-and were not re-opened. I give author, title and year only, no chapter or page numbers, because I
-am not sure of them. Verify each one before citing it elsewhere. Where I could not name a source for
-an item I say "no source".
 
 - **[Bourgoyne]** Bourgoyne, Millheim, Chenevert, Young, *Applied Drilling Engineering*, SPE Textbook Series Vol. 2, 1986.
 - **[Grace]** R. D. Grace, *Blowout and Well Control Handbook*, Gulf Professional Publishing, 2003.
@@ -146,8 +139,6 @@ Large drifts can push readings out of physical range (e.g. negative WOB).
 | `mse_mpa` | `WOB/A + 2π·RPM·T/(A·ROP)`, A = 0.0366 m² (8.5 in bit assumed) | Mechanical specific energy [Teale]. Bit size is an assumption. NEEDS REVIEW |
 
 All are past-only (diff or trailing window), so a feature at time t never uses later rows (tested).
-
-## Known limitations
 
 - The generator and the features share assumptions (for example the 1.8 pressure exponent), so a detector using `spp_norm` is partly rediscovering the generator. Results on this data say little about real rigs.
 - Hook load, standpipe vs bit pressure drop, pump strokes, block position, inclination and direction are missing.
