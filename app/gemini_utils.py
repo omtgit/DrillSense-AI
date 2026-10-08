@@ -48,6 +48,8 @@ AUDIENCES = {
 }
 LANGUAGES = ("English", "Hindi")
 NOT_IN_DATA = "That is not in the data."
+NOT_IN_DATA_HI = "यह जानकारी डेटा में नहीं है।"
+REFUSALS = {"English": NOT_IN_DATA, "Hindi": NOT_IN_DATA_HI}
 
 RULES = """Rules (they matter more than style):
 - Use only the facts in the report. Do not add numbers, causes, wells, dates or recommendations.
@@ -86,9 +88,10 @@ QUESTION:
 """
 
 
-def _guarded_call(prompt, source, fallback, api_key, model):
+def _guarded_call(prompt, source, fallback, api_key, model, extra_source=""):
     """Run one Gemini call. Returns (text, error_or_None); `fallback` on any failure or ungrounded number.
 
+    Numbers are accepted if they appear in `source` or in `extra_source` (the user's question).
     The key is never logged or included in error text.
     """
     from report import numbers_are_grounded
@@ -114,7 +117,7 @@ def _guarded_call(prompt, source, fallback, api_key, model):
         return fallback, f"Gemini call failed ({msg}); showing the template report."
     if not text.strip():
         return fallback, "Gemini returned no text; showing the template report."
-    if not numbers_are_grounded(text, source):
+    if not numbers_are_grounded(text, f"{source}\n{extra_source}"):
         return fallback, "Gemini introduced numbers not in the facts; showing the template report."
     return text, None
 
@@ -137,9 +140,12 @@ def answer_question(template_report, question, language="English", api_key=None,
 
     On any failure the answer is None and the caller shows the error instead.
     """
-    prompt = ASK_PROMPT.format(language=language, rules=RULES, refusal=NOT_IN_DATA,
+    refusal = REFUSALS.get(language, NOT_IN_DATA)
+    prompt = ASK_PROMPT.format(language=language, rules=RULES, refusal=refusal,
                                report=template_report, question=question.strip())
-    text, err = _guarded_call(prompt, template_report, None, api_key, model)
+    text, err = _guarded_call(prompt, template_report, None, api_key, model, extra_source=question)
     if err:
         return None, err.replace("showing the template report", "no answer was generated")
+    if text.strip().rstrip(".。") in {r.rstrip(".。") for r in REFUSALS.values()}:
+        return refusal, None
     return text, None

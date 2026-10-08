@@ -144,3 +144,32 @@ def test_old_call_pattern_fails_with_the_real_client(monkeypatch):
         assert "closed" in str(exc)
     else:
         raise AssertionError("expected the temporary-Client pattern to fail")
+
+
+def test_answer_accepts_numbers_from_the_question(monkeypatch):
+    _patch(monkeypatch, "No, 500 is not the risk score; it is 87.5.")
+    ans, err = gemini_utils.answer_question(REPORT, "Is the risk 500?", "English", "k")
+    assert err is None and "500" in ans
+    # ...but a number in neither the report nor the question is still rejected.
+    _patch(monkeypatch, "It is 501.")
+    ans, err = gemini_utils.answer_question(REPORT, "Is the risk 500?", "English", "k")
+    assert ans is None and "numbers" in err
+
+
+def test_hindi_refusal_is_shown_in_hindi(monkeypatch):
+    seen = []
+    _patch(monkeypatch, gemini_utils.NOT_IN_DATA, seen)
+    ans, err = gemini_utils.answer_question(REPORT, "Who is the CEO?", "Hindi", "k")
+    assert err is None and ans == gemini_utils.NOT_IN_DATA_HI
+    assert gemini_utils.NOT_IN_DATA_HI in seen[0]
+    ans, _ = gemini_utils.answer_question(REPORT, "Who is the CEO?", "English", "k")
+    assert ans == gemini_utils.NOT_IN_DATA
+
+
+def test_devanagari_digits_are_normalised(monkeypatch):
+    _patch(monkeypatch, "जोखिम स्कोर ८७.५ है और २१ रीडिंग हैं।")
+    ans, err = gemini_utils.answer_question(REPORT, "जोखिम क्या है?", "Hindi", "k")
+    assert err is None and "८७.५" in ans
+    _patch(monkeypatch, "जोखिम स्कोर ९९ है।")
+    ans, err = gemini_utils.answer_question(REPORT, "जोखिम क्या है?", "Hindi", "k")
+    assert ans is None and "numbers" in err
