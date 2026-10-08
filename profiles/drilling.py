@@ -107,4 +107,9 @@ PROFILE = Profile(
     physics_features=FEATURES,
     severity_rules=SEVERITY_RULES,
     vocab=VOCAB,
+    trend_channels=("depth_m",),
+    review_note=(
+        "Severity, priority and response wording come from a lookup written for this project "
+        "and have not been reviewed by a drilling or well-control engineer."
+    ),
 )
