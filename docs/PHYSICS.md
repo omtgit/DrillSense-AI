@@ -4,6 +4,12 @@ Code: `generators/drilling.py`. Profile: `profiles/drilling.py`. All numbers bel
 used in the code at full event size (`scale = 1.0`). Events are drawn with scale 0.15 to 1.0
 (log-uniform), so most events are smaller.
 
+**Read this first.** The generator was written by the project author with AI assistance. It has not been
+reviewed by a practising drilling engineer, and it was built without field data. The *direction* of
+each signature (which channel goes up or down) follows standard drilling-problem descriptions. The
+*magnitudes, time constants and couplings* are the author's own choices, picked to be plausible and
+to make the problem non-trivial. Every item marked **NEEDS REVIEW** must be checked by someone with
+drilling experience before any claim is built on it.
 
 ## About the sources
 
@@ -116,7 +122,7 @@ a string washout only.
 | spp | +35 % | Rising pump pressure with a blocked annulus is the usual description [SLB] (I am not sure "pack-off" has its own entry; verify). Size NEEDS REVIEW |
 | flow_out | −20 % of the lagged flow (restricted returns). Pit volume falls through mass balance | NEEDS REVIEW: where the missing fluid goes (formation, compression) is not modelled; in the data it looks like a loss, and what separates it from Lost Circulation is that pump pressure rises instead of falling |
 | torque | +30 % with erratic spikes | NEEDS REVIEW; no source |
-| rop | −40 % 
+| rop | −40 % | NEEDS REVIEW; no source |
 
 ### Sensor drift
 
@@ -140,3 +146,9 @@ Large drifts can push readings out of physical range (e.g. negative WOB).
 | `mse_mpa` | `WOB/A + 2π·RPM·T/(A·ROP)`, A = 0.0366 m² (8.5 in bit assumed) | Mechanical specific energy [Teale]. Bit size is an assumption. NEEDS REVIEW |
 
 All are past-only (diff or trailing window), so a feature at time t never uses later rows (tested).
+
+## Known limitations
+
+- The generator and the features share assumptions (for example the 1.8 pressure exponent), so a detector using `spp_norm` is partly rediscovering the generator. Results on this data say little about real rigs.
+- Hook load, standpipe vs bit pressure drop, pump strokes, block position, inclination and direction are missing.
+- Severity, priority and recommended responses are a lookup by anomaly type that I made up. NEEDS REVIEW by a well-control / drilling engineer before showing them to anyone as advice.
