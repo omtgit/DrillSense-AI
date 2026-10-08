@@ -80,3 +80,36 @@ def test_assistant_with_key_shows_controls_and_falls_back_on_bad_output(monkeypa
     gen.click().run()
     assert not at.exception
     assert any("showing the template report" in w.value or "Gemini call failed" in w.value for w in at.warning)
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_every_page_shows_the_simulated_data_notice(app, page):
+    app.sidebar.selectbox[0].set_value("Drilling")
+    app.sidebar.radio[0].set_value(page).run()
+    assert any("Simulated data. Educational demo, not for operational decisions." in c.value for c in app.caption)
+
+
+def test_sidebar_data_line_is_plain_and_about_links(app):
+    app.sidebar.selectbox[0].set_value("Drilling")
+    app.sidebar.radio[0].set_value("About").run()
+    assert any(c.value == "Data: built-in simulated demo wells" for c in app.sidebar.caption)
+    text = " ".join(m.value for m in app.markdown)
+    for needle in ("docs/PHYSICS.md", "docs/EVAL.md", "github.com/omtgit/DrillSense-AI"):
+        assert needle in text
+
+
+def test_load_error_is_friendly_with_technical_text_hidden(monkeypatch):
+    import data_source
+
+    def boom(*a, **k):
+        raise FileNotFoundError("Drilling data not found: /x/y.csv")
+
+    import streamlit as st
+    st.cache_data.clear()  # an earlier test may already have cached the scored wells
+    monkeypatch.setattr(data_source, "load_drilling", boom)
+    at = AppTest.from_file(MAIN, default_timeout=180).run()
+    assert not at.exception
+    assert any("could not be loaded" in e.value for e in at.error)
+    assert all("FileNotFoundError" not in e.value for e in at.error)
+    assert any("FileNotFoundError" in c.value for c in at.code)
+    assert "Technical details" in [e.label for e in at.expander]

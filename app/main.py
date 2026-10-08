@@ -11,14 +11,15 @@ import drilling_pages
 from data_source import data_source_name, load_drilling, load_sensor_data
 from gemini_utils import model_name
 from profiles import get_profile
+from ui import DOCS_URL, REPO_URL, SIM_NOTICE, show_error
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 HELDOUT_METRICS = Path(__file__).resolve().parent.parent / "docs" / "heldout_metrics.json"
 
 st.set_page_config(
-    page_title="DrillSense AI",
-    page_icon=str(ASSETS_DIR / "logo.png"),
+    page_title="DrillSense AI | Drilling anomaly detection demo",
+    page_icon=str(ASSETS_DIR / "logo.png") if (ASSETS_DIR / "logo.png").is_file() else "⛽",
     layout="wide"
 )
 
@@ -70,6 +71,7 @@ def load_heldout_metrics():
 
 st.title("⛽ DrillSense AI")
 st.subheader("GPU-Benchmarked Decision Intelligence for Oilfield Monitoring")
+st.caption(f"⚠️ {SIM_NOTICE}")
 
 # ------------------------
 # Sidebar
@@ -97,10 +99,10 @@ page = st.sidebar.radio(
     ]
 )
 
-if profile_name == "drilling":
-    st.sidebar.caption("Data: committed drilling sample (local files; BigQuery serves the production profile only)")
+if profile_name == "drilling" or data_source_name() == "local":
+    st.sidebar.caption("Data: built-in simulated demo wells")
 else:
-    st.sidebar.caption(f"Data source: {data_source_name()}")
+    st.sidebar.caption("Data: simulated wells loaded from a connected BigQuery table")
 
 with st.sidebar.expander("AI assistant (optional)"):
     st.caption(
@@ -126,7 +128,7 @@ if page in PROFILE_PAGES and profile_name == "drilling":
         scored = load_drilling_scored()
         det = get_detector()
     except Exception as exc:
-        st.error(f"Could not load drilling data or train the detector: {type(exc).__name__}: {exc}")
+        show_error("the demo wells could not be loaded or scored", exc)
         st.stop()
     if page == "Executive Dashboard":
         drilling_pages.render_dashboard(scored, det)
@@ -140,7 +142,7 @@ if page in PROFILE_PAGES:
     try:
         df = load_production_data()
     except Exception as exc:
-        st.error(f"Could not load data: {type(exc).__name__}: {exc}")
+        show_error("the demo wells could not be loaded", exc)
         st.stop()
 
 # ===================================================
@@ -428,6 +430,15 @@ elif page == "About":
 
     st.markdown("""
 
+### Learn more
+
+- [Source code on GitHub]({repo})
+- [Physics of the simulated rig signals (PHYSICS.md)]({docs}/PHYSICS.md)
+- [How the models were evaluated (EVAL.md)]({docs}/EVAL.md)
+- [CPU vs GPU benchmark notes (BENCHMARKS.md)]({docs}/BENCHMARKS.md)
+
+All data in this demo is simulated. It is an educational project, not a tool for operational decisions.
+
 ### Technologies
 
 - Google Cloud Storage
@@ -463,5 +474,6 @@ AI Decision Intelligence
       ▼
 
 Cloud Deployment
+```
 
-""")
+""".replace("{repo}", REPO_URL).replace("{docs}", DOCS_URL))
