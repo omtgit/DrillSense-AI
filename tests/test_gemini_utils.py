@@ -52,3 +52,60 @@ def test_other_errors_still_fall_back(monkeypatch):
     monkeypatch.setattr(gemini_utils, "get_client", lambda key=None: client)
     text, err = gemini_utils.rephrase_report("report", "k")
     assert text == "report" and "failed" in err
+
+
+REPORT = "## Operational Summary\nWell W1 risk 87.5 from 10:00 to 10:20 (21 readings)."
+
+
+def _patch(monkeypatch, text, seen=None):
+    client, s = fake_client(text=text)
+
+    def gen(model, contents):
+        if seen is not None:
+            seen.append(contents)
+        return SimpleNamespace(text=text)
+
+    client.models.generate_content = gen
+    monkeypatch.setattr(gemini_utils, "get_client", lambda key=None: client)
+
+
+def test_write_for_includes_audience_and_language(monkeypatch):
+    seen = []
+    _patch(monkeypatch, "Handover: W1 risk 87.5, 21 readings.", seen)
+    text, err = gemini_utils.write_for(REPORT, "Shift handover note", "Hindi", "k")
+    assert err is None and "87.5" in text
+    assert "Hindi" in seen[0] and "handover note" in seen[0] and REPORT in seen[0]
+    assert "Do not add numbers, causes" in seen[0]
+
+
+def test_write_for_rejects_invented_numbers(monkeypatch):
+    _patch(monkeypatch, "W1 risk 87.5 and 99 readings.")
+    text, err = gemini_utils.write_for(REPORT, "Management summary", "English", "k")
+    assert text == REPORT and "numbers" in err
+
+
+def test_answer_question_grounded_and_refusal_in_prompt(monkeypatch):
+    seen = []
+    _patch(monkeypatch, "The risk score is 87.5.", seen)
+    ans, err = gemini_utils.answer_question(REPORT, "What is the risk?", "English", "k")
+    assert err is None and "87.5" in ans
+    assert gemini_utils.NOT_IN_DATA in seen[0] and "untrusted" in seen[0]
+
+
+def test_answer_question_rejects_ungrounded_and_hides_key(monkeypatch):
+    _patch(monkeypatch, "It is 4242.")
+    ans, err = gemini_utils.answer_question(REPORT, "q", "English", "k")
+    assert ans is None and "numbers" in err
+    client, _ = fake_client(exc=RuntimeError("bad key sk-secret"))
+    monkeypatch.setattr(gemini_utils, "get_client", lambda key=None: client)
+    ans, err = gemini_utils.answer_question(REPORT, "q", "English", "sk-secret")
+    assert ans is None and "sk-secret" not in err
+
+
+def test_has_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr(gemini_utils, "load_dotenv", lambda: None)
+    assert not gemini_utils.has_key(None)
+    assert gemini_utils.has_key("k")
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    assert gemini_utils.has_key(None)

@@ -102,13 +102,17 @@ if profile_name == "drilling":
 else:
     st.sidebar.caption(f"Data source: {data_source_name()}")
 
-with st.sidebar.expander("Optional: Gemini rephrasing"):
+with st.sidebar.expander("AI assistant (optional)"):
     st.caption(
-        "Reports work without a key. A key lets Gemini rephrase the report text; it may not "
-        "add facts. The key stays in this browser session only and is never stored or logged."
+        "The full report works without a key. Add your own free Google AI Studio key to get the same facts "
+        "written for a specific reader, in English or Hindi, and to ask questions about this event. "
+        "Detection is done by the model; the assistant only helps you communicate it. It cannot invent "
+        "numbers: everything is checked against the report. Your key stays in this browser session and is "
+        "never stored or logged."
     )
-    st.text_input("Gemini API key", type="password", key="gemini_api_key")
-    st.text_input("Gemini model", value=model_name(), key="gemini_model")
+    st.markdown("[Get a free key from Google AI Studio](https://aistudio.google.com/apikey)")
+    st.text_input("Google AI Studio key", type="password", key="gemini_api_key")
+    st.text_input("Model name (advanced)", value=model_name(), key="gemini_model")
 
 # ===================================================
 # Data for the three profile-aware pages
@@ -312,8 +316,7 @@ elif page == "AI Decision Center":
     st.caption(
         "The table ranks rows by the XGBoost risk score (ties: most recent first). "
         "Severity and recommended response are looked up from the injected ground-truth "
-        "anomaly type, not predicted. Gemini is only called when you press the "
-        "report button below."
+        "anomaly type, not predicted. The optional AI assistant below is only called when you press a button."
     )
 
     top_risk = rank_by_risk(df).head(10)

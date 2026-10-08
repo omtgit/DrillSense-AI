@@ -132,7 +132,7 @@ def render_decision_center(scored, det):
     st.caption(
         "One row per well: its highest-risk minute by the XGBoost risk score (ties: most recent first). "
         "Severity and response are the profile's rules for the PREDICTED class, not ground truth. "
-        f"{profile.review_note} Gemini is only called when you press the report button below."
+        f"{profile.review_note} The optional AI assistant below is only called when you press a button."
     )
     best = rank_by_risk(scored).drop_duplicates("well_id").head(10)
     st.dataframe(
