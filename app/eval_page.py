@@ -171,7 +171,7 @@ def render(st):
     st.subheader("Feature ablation")
     st.dataframe(ablation_frame(res, mode, budget), hide_index=True, width="stretch")
 
-    st.subheader("What XGBoost uses (TreeSHAP, well-held-out folds)")
+    st.subheader("What the XGBoost model pays attention to (SHAP values, on wells it had not seen)")
     multi = res.get("shap", {}).get("multiclass", {})
     if multi:
         typ = st.selectbox("Anomaly type", list(multi))

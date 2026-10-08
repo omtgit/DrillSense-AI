@@ -10,6 +10,9 @@ import streamlit as st
 
 from report_ui import rank_by_risk, report_section
 
+HELP_PRECISION = "Of the minutes the model flagged, the share that really were inside a simulated incident."
+HELP_RECALL = "Of the minutes inside a simulated incident, the share the model flagged."
+HELP_F1 = "One score that balances precision and recall (1.0 is perfect)."
 EXPLORER_DEFAULT = ["flow_out_lpm", "pit_volume_m3", "spp_bar", "rop_mph"]
 
 
@@ -37,10 +40,11 @@ def render_dashboard(scored, det):
     i = det.info
     st.subheader("Detection quality on held-out generated wells")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Row precision", f"{i['precision']:.2f}")
-    m2.metric("Row recall", f"{i['recall']:.2f}")
-    m3.metric("Row F1", f"{i['f1']:.2f}")
-    m4.metric("Events detected", f"{i['event_recall']:.0%}")
+    m1.metric("Row precision", f"{i['precision']:.2f}", help=HELP_PRECISION)
+    m2.metric("Row recall", f"{i['recall']:.2f}", help=HELP_RECALL)
+    m3.metric("Row F1", f"{i['f1']:.2f}", help=HELP_F1)
+    m4.metric("Events detected", f"{i['event_recall']:.0%}",
+              help="The share of simulated incidents where the model raised at least one alarm during or just after it.")
     st.caption(
         f"Trained on {i['train_wells']} generated wells ({i['train_rows']:,} rows, seed {i['train_seed']}); "
         f"scored on {i['valid_wells']} other generated wells ({i['valid_rows']:,} rows, "
@@ -61,9 +65,9 @@ Timestamp: {top['timestamp']}
 
 Predicted issue: {top['predicted_anomaly']}
 
-Risk score (100 × (1 − P(Normal))): {top['predicted_risk_score']}
+Risk score (0 to 100, higher means the model is more sure something is wrong): {top['predicted_risk_score']}
 
-Severity (profile rule for the predicted class): {top['predicted_severity']}
+Severity (from the drilling rules, for the predicted issue): {top['predicted_severity']}
 
 Ground truth at this row: {top['anomaly_type']}
 """
@@ -84,6 +88,7 @@ Ground truth at this row: {top['anomaly_type']}
         both[both["class"] != "Normal"], x="class", y="rows", color="source", barmode="group",
         category_orders={"class": labels[1:]},
         title="Anomaly rows by type: injected vs predicted (Normal rows omitted)",
+        labels={"class": "Anomaly type", "rows": "Number of one-minute rows", "source": "Source"},
     )
     st.plotly_chart(fig, width="stretch")
 
@@ -106,7 +111,8 @@ def render_explorer(scored, profile):
     )
     for ch in choice:
         st.plotly_chart(
-            px.line(temp, x="timestamp", y=ch, title=profile.channels[ch].report_label),
+            px.line(temp, x="timestamp", y=ch, title=profile.channels[ch].report_label,
+                    labels={"timestamp": "Time", ch: profile.channels[ch].report_label}),
             width="stretch",
         )
 
@@ -131,17 +137,20 @@ def render_decision_center(scored, det):
     st.header("AI Decision Center")
     st.caption(
         "One row per well: its highest-risk minute by the XGBoost risk score (ties: most recent first). "
-        "Severity and response are the profile's rules for the PREDICTED class, not ground truth. "
+        "Severity and response come from the drilling rules for the PREDICTED issue, not from ground truth. "
         f"{profile.review_note} The optional AI assistant below is only called when you press a button."
     )
     best = rank_by_risk(scored).drop_duplicates("well_id").head(10)
     st.dataframe(
         best[["well_id", "timestamp", "predicted_anomaly", "predicted_risk_score",
               "predicted_severity", "predicted_response", "anomaly_type"]].rename(columns={
-            "predicted_severity": "severity (profile rule)",
-            "predicted_response": "recommended_response (profile rule)",
-            "anomaly_type": "ground truth at this row",
+            "well_id": "Well", "timestamp": "Time", "predicted_anomaly": "Predicted issue",
+            "predicted_risk_score": "Risk score",
+            "predicted_severity": "Severity (drilling rule)",
+            "predicted_response": "Recommended response (drilling rule)",
+            "anomaly_type": "Ground truth at this row",
         }),
+        hide_index=True,
         width="stretch",
     )
 
@@ -151,9 +160,9 @@ def render_decision_center(scored, det):
     st.subheader("Incident Summary")
     st.write(f"**Well** : {row['well_id']}")
     st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
-    st.write(f"**Severity (profile rule)** : {row['predicted_severity']}")
+    st.write(f"**Severity (drilling rule)** : {row['predicted_severity']}")
     st.write(f"**Risk Score** : {row['predicted_risk_score']}")
-    st.write(f"**Recommended Response (profile rule)** : {row['predicted_response']}")
+    st.write(f"**Recommended Response (drilling rule)** : {row['predicted_response']}")
     st.write(f"**Ground truth at this row** : {row['anomaly_type']}")
 
     report_section(scored, row, profile, rules_from_profile=True)

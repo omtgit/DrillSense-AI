@@ -113,3 +113,12 @@ def test_load_error_is_friendly_with_technical_text_hidden(monkeypatch):
     assert all("FileNotFoundError" not in e.value for e in at.error)
     assert any("FileNotFoundError" in c.value for c in at.code)
     assert "Technical details" in [e.label for e in at.expander]
+
+
+@pytest.mark.parametrize("profile", ["Drilling", "Production"])
+def test_decision_center_table_has_plain_headers(app, profile):
+    app.sidebar.selectbox[0].set_value(profile)
+    app.sidebar.radio[0].set_value("AI Decision Center").run()
+    cols = list(app.dataframe[0].value.columns)
+    assert not [c for c in cols if "_" in c], cols
+    assert "Well" in cols and "Predicted issue" in cols
