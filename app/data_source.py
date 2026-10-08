@@ -1,7 +1,8 @@
 """Where the app gets its sensor data from.
 
 DATA_SOURCE=local (default) reads CSV/parquet from LOCAL_DATA_PATH, or data/sample/ when it is unset.
-DATA_SOURCE=bigquery reads drillsense.sensor_data; it needs google-cloud credentials and is optional.
+DATA_SOURCE=bigquery reads drillsense.sensor_data (production profile only); it needs google-cloud credentials and is optional.
+The drilling profile always reads local files (see load_drilling).
 Clients are created inside functions, so importing this module never needs credentials.
 """
 import os
@@ -48,6 +49,34 @@ def load_local(path=None):
     if missing:
         raise ValueError(f"{path} is missing columns: {missing}")
     df = df[COLUMNS].copy()
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    return df
+
+
+DEFAULT_DRILLING_PATH = REPO_ROOT / "data" / "sample" / "drilling"
+DRILLING_COLUMNS = [
+    "timestamp", "well_id", "depth_m", "wob_kn", "rpm", "torque_knm", "rop_mph", "spp_bar",
+    "flow_in_lpm", "flow_out_lpm", "pit_volume_m3", "mud_weight_sg", "gas_units",
+    "anomaly_type", "anomaly_flag",
+]
+
+
+def load_drilling(path=None):
+    """Drilling telemetry (1-minute rows) from DRILLING_DATA_PATH, default data/sample/drilling/.
+
+    Always local: the BigQuery connector holds the production dataset only. `anomaly_type` and
+    `anomaly_flag` are the generator's ground truth, kept for scoring and display, never as model input.
+    """
+    path = Path(path or os.getenv("DRILLING_DATA_PATH") or DEFAULT_DRILLING_PATH).expanduser()
+    if path.is_dir():
+        path = path / "drilling_data.csv"
+    if not path.is_file():
+        raise FileNotFoundError(f"Drilling data not found: {path}")
+    df = _read_file(path)
+    missing = [c for c in DRILLING_COLUMNS if c not in df.columns]
+    if missing:
+        raise ValueError(f"{path} is missing columns: {missing}")
+    df = df[DRILLING_COLUMNS].copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     return df
 

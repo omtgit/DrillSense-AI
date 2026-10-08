@@ -32,8 +32,9 @@ def top_contributors(well_df, event_mask, k=3, profile=None):
     out = []
     if base.empty or event.empty:
         return out
+    skip = set((profile or get_profile(DEFAULT_PROFILE)).trend_channels)
     for col in labels:
-        if col not in well_df.columns:
+        if col not in well_df.columns or col in skip:
             continue
         sigma = _mad_sigma(base[col])
         if not sigma or pd.isna(sigma):
@@ -47,8 +48,25 @@ def top_contributors(well_df, event_mask, k=3, profile=None):
     return out[:k]
 
 
-def build_finding(df, row, k=3, profile=None):
-    """Structured facts for the event containing `row` (a selected well's top-risk row)."""
+GROUND_TRUTH_SOURCE = "ground-truth lookup in this dataset"
+PROFILE_RULE_SOURCE = "profile rule for the predicted class"
+
+
+def build_finding(df, row, k=3, profile=None, rules_from_profile=False):
+    """Structured facts for the event containing `row` (a selected well's top-risk row).
+
+    By default severity and response are read from the row (production data carries them as a
+    ground-truth lookup). With `rules_from_profile` they come from the profile's severity rules
+    for the PREDICTED class, so a report never leans on ground-truth labels.
+    """
+    prof = profile or get_profile(DEFAULT_PROFILE)
+    if rules_from_profile:
+        rule = prof.severity_rules.get(str(row["predicted_anomaly"]))
+        severity = rule.severity if rule else "Unrated"
+        response = rule.response if rule else "No rule defined for this class"
+        source = PROFILE_RULE_SOURCE
+    else:
+        severity, response, source = str(row["severity"]), str(row["recommended_response"]), GROUND_TRUTH_SOURCE
     well = df[df["well_id"] == row["well_id"]].sort_values("timestamp").reset_index(drop=True)
     flagged = well["predicted_anomaly"].ne("Normal")
     run_id = (flagged != flagged.shift()).cumsum()
@@ -57,8 +75,9 @@ def build_finding(df, row, k=3, profile=None):
         "well_id": str(row["well_id"]),
         "predicted_anomaly": str(row["predicted_anomaly"]),
         "risk_score": float(row["predicted_risk_score"]),
-        "severity": str(row["severity"]),
-        "recommended_response": str(row["recommended_response"]),
+        "severity": severity,
+        "recommended_response": response,
+        "rule_source": source,
         "detected": False,
         "contributors": [],
     }
@@ -70,7 +89,7 @@ def build_finding(df, row, k=3, profile=None):
             n_rows=int(mask.sum()),
             start=str(ev["timestamp"].iloc[0]),
             end=str(ev["timestamp"].iloc[-1]),
-            contributors=top_contributors(well, mask, k, profile),
+            contributors=top_contributors(well, mask, k, prof),
         )
     return finding
 
@@ -89,11 +108,12 @@ def render_report(f, profile=None):
             f"(predicted class: {f['predicted_anomaly']}).\n\n"
             "## Immediate Actions\nNo action required from this tool's output."
         )
+    src = f.get("rule_source", GROUND_TRUTH_SOURCE)
     lines = [
         "## Operational Summary",
         f"Well {f['well_id']} shows a model-detected **{f['predicted_anomaly']}** event from "
         f"{f['start']} to {f['end']} ({f['n_rows']} readings). Predicted risk score: "
-        f"{f['risk_score']:g}. Severity (ground-truth lookup in this dataset): {f['severity']}.",
+        f"{f['risk_score']:g}. Severity ({src}): {f['severity']}.",
         "",
         "## Key Signals",
     ]
@@ -116,8 +136,9 @@ def render_report(f, profile=None):
         risk,
         "",
         "## Immediate Actions",
-        f"Recommended response (ground-truth lookup in this dataset): {f['recommended_response']}. "
-        "Verify against field data before acting.",
+        f"Recommended response ({src}): {f['recommended_response']}. "
+        "Verify against field data before acting."
+        + (f" {p.review_note}" if p.review_note else ""),
         "",
         "## Longer-Term Recommendation",
         "Review the sensor history for this well, confirm the cause on site, and record the "

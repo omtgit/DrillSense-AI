@@ -44,6 +44,11 @@ class Profile:
         "Unclear; treat as unverified until checked by an engineer.",
     )
 
+    # channels that move with normal progress (e.g. depth); left out of "which signals moved"
+    trend_channels: Tuple[str, ...] = ()
+    # caveat printed in reports; empty when nothing needs flagging
+    review_note: str = ""
+
     @property
     def channel_labels(self):
         return {k: c.report_label for k, c in self.channels.items()}

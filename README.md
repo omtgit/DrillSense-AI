@@ -89,6 +89,9 @@ DrillSense-AI/
 ├── app/
 │   ├── main.py
 │   ├── data_source.py
+│   ├── detector.py        (drilling detector, trained at start-up)
+│   ├── drilling_pages.py
+│   ├── report.py / report_ui.py
 │   └── gemini_utils.py
 │
 ├── assets/
@@ -143,7 +146,8 @@ No cloud account or API key is needed. By default the app reads the committed sa
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATA_SOURCE` | `local` | `local` reads CSV/parquet files; `bigquery` reads `<project>.drillsense.sensor_data` (optional, needs Google Cloud credentials) |
-| `LOCAL_DATA_PATH` | `data/sample` | A CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
+| `LOCAL_DATA_PATH` | `data/sample` | Production profile: a CSV/parquet file, or a directory of them, with the columns in `app/data_source.py` |
+| `DRILLING_DATA_PATH` | `data/sample/drilling` | Drilling profile: a `drilling_data.csv` (or its directory), e.g. from `scripts/generate_drilling_data.py` |
 | `BIGQUERY_TABLE` | `<project>.drillsense.sensor_data` | Override the BigQuery table (only with `DATA_SOURCE=bigquery`) |
 | `GEMINI_API_KEY` | unset | Optional. Only used by "Rephrase with Gemini"; a key pasted in the sidebar takes precedence. The template report works without it |
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Default model for rephrasing; also editable in the sidebar. Not verified against a live key; a 404 shows a "try another model name" message |
@@ -171,9 +175,34 @@ python scripts/generate_drilling_data.py --sample   # -> data/sample/drilling/ (
 ```
 
 Every signature and assumption, with sources and **NEEDS REVIEW** flags, is in
-[`docs/PHYSICS.md`](docs/PHYSICS.md). The physics is my own plausible model, not field data, and
-has not been reviewed by a drilling engineer. The Streamlit app does not read the drilling data
-yet (detectors and evaluation on it are the next phase).
+[`docs/PHYSICS.md`](docs/PHYSICS.md). The physics is a plausible model written by the project
+author with AI assistance, not field data, and has not been reviewed by a drilling engineer.
+
+#### How the app uses the drilling profile
+
+The sidebar has a **Domain profile** selector: *Drilling* (default) or *Production* (the original
+dataset). For Drilling, the Executive Dashboard, Well Explorer and AI Decision Center read the
+committed sample in `data/sample/drilling/` and show two things separately: **injected anomalies
+(ground truth)** and **model detections**. Severity, recommended response and report wording for a
+detection come from the profile's rules for the *predicted* class, not from ground-truth labels, and
+reports say the rule table has not been reviewed by a drilling engineer.
+
+**The detector is trained at app start-up, not shipped as a model file.** On first load the app
+generates 8 training wells and 4 validation wells (seeds 1001 and 2002; the committed sample uses
+seed 11, so the sample wells are never trained on), fits a 7-class XGBoost model, and caches it for
+the life of the server process (`st.cache_resource`). Measured on a 4-core cloud container this takes
+about 10 s including the first page render, well under the 30 s target. I chose this over a
+committed model file because a pickled booster is an unreviewable binary tied to one `xgboost`
+version, `models/` is gitignored on purpose, and the seeded run is deterministic. The cost is a
+one-off wait on each server start. The dashboard's precision/recall come from the 4 validation
+wells at a fixed rule (flag when P(Normal) < 0.5); recall is low (~0.16 row-level, ~57% of events
+caught) because every event's ramp start is labelled anomalous while barely visible. The full
+event-level comparison, with baselines, is on the Model Evaluation page and in
+[`docs/EVAL.md`](docs/EVAL.md).
+
+Only the *Drilling* profile is wired to the detector. *Production* still shows the original
+precomputed predictions. `DATA_SOURCE=bigquery` applies to the Production profile only; Drilling
+always reads local files (override the path with `DRILLING_DATA_PATH`).
 
 ---
 

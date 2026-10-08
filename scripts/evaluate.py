@@ -44,7 +44,7 @@ from sklearn.model_selection import GroupKFold
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from app.features import add_profile_features  # noqa: E402
+from app.features import add_context as _add_context, add_profile_features  # noqa: E402
 from generators.drilling import generate_dataset  # noqa: E402
 from profiles import get_profile  # noqa: E402
 
@@ -87,18 +87,7 @@ def spec_name(spec):
 # ---------------------------------------------------------------- data and features
 
 def add_context(df):
-    """Past-only rolling context per well: 15-min mean/std, deviation from a 180-min trailing mean, 5-min diff."""
-    parts = []
-    for _, g in df.groupby("well_id", sort=False):
-        cols = {}
-        for c in CTX_BASE:
-            s = g[c]
-            cols[f"{c}__mean15"] = s.rolling(15, min_periods=5).mean()
-            cols[f"{c}__std15"] = s.rolling(15, min_periods=5).std()
-            cols[f"{c}__dev180"] = s - s.rolling(180, min_periods=30).mean()
-            cols[f"{c}__d5"] = s.diff(5)
-        parts.append(pd.DataFrame(cols, index=g.index))
-    return pd.concat([df, pd.concat(parts)], axis=1)
+    return _add_context(df, CTX_BASE)
 
 
 def feature_sets(df):
