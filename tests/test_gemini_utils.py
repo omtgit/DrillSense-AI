@@ -109,3 +109,38 @@ def test_has_key(monkeypatch):
     assert gemini_utils.has_key("k")
     monkeypatch.setenv("GEMINI_API_KEY", "x")
     assert gemini_utils.has_key(None)
+
+
+def _closed_client_guard(monkeypatch):
+    """Make the real SDK refuse requests once its HTTP client is closed; no network is used."""
+    import json
+    from google.genai import _api_client
+
+    def request(self, http_method, path, request_dict, http_options=None):
+        if self._httpx_client.is_closed:
+            raise RuntimeError("Cannot send a request, as the client has been closed.")
+        body = {"candidates": [{"content": {"role": "model", "parts": [{"text": "ok 87.5"}]}}]}
+        return _api_client.SdkHttpResponse(headers={}, body=json.dumps(body))
+
+    monkeypatch.setattr(_api_client.BaseApiClient, "request", request)
+
+
+def test_real_client_is_not_closed_before_the_request(monkeypatch):
+    """Regression: get_client(key).models.generate_content(...) let the Client be garbage-collected
+    (closing its HTTP client) before the request went out."""
+    _closed_client_guard(monkeypatch)
+    text, err = gemini_utils.rephrase_report("report 87.5", "dummy-key")
+    assert err is None and text == "ok 87.5"
+    ans, err = gemini_utils.answer_question("report 87.5", "what?", "English", "dummy-key")
+    assert err is None and ans == "ok 87.5"
+
+
+def test_old_call_pattern_fails_with_the_real_client(monkeypatch):
+    """Documents the bug: the temporary-Client pattern hits the closed-client error."""
+    _closed_client_guard(monkeypatch)
+    try:
+        gemini_utils.get_client("dummy-key").models.generate_content(model="m", contents="x")
+    except RuntimeError as exc:
+        assert "closed" in str(exc)
+    else:
+        raise AssertionError("expected the temporary-Client pattern to fail")

@@ -94,7 +94,10 @@ def _guarded_call(prompt, source, fallback, api_key, model):
     from report import numbers_are_grounded
 
     try:
-        response = get_client(api_key).models.generate_content(
+        # Keep the Client in a local for the whole call: Client.__del__ closes its HTTP client, so
+        # get_client(...).models.generate_content(...) would close it before the request is sent.
+        client = get_client(api_key)
+        response = client.models.generate_content(
             model=(model or "").strip() or model_name(), contents=prompt
         )
         text = response.text or ""
