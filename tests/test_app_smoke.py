@@ -67,6 +67,19 @@ def test_assistant_without_key_shows_hint_not_controls(monkeypatch):
     assert not [b for b in at.button if b.label in ("Generate", "Ask")]
 
 
+def test_suggested_question_answers_instantly_without_a_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    import gemini_utils
+    monkeypatch.setattr(gemini_utils, "load_dotenv", lambda: None)
+    monkeypatch.setattr(gemini_utils, "get_client", lambda key=None: (_ for _ in ()).throw(AssertionError("API used")))
+    at = _decision_center()
+    btn = next(b for b in at.button if b.label == "Which signal moved the most?")
+    btn.click().run()
+    assert not at.exception
+    assert any("moved the most" in m.value for m in at.markdown)
+    assert any(c.value == "Instant answer from the incident facts" for c in at.caption)
+
+
 def test_assistant_with_key_shows_controls_and_falls_back_on_bad_output(monkeypatch):
     import gemini_utils
     monkeypatch.setattr(gemini_utils, "write_for", lambda t, a, l, k=None, m=None: (t, "Gemini call failed"))
