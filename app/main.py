@@ -22,23 +22,45 @@ st.set_page_config(
     layout="wide"
 )
 
-@st.cache_data
+@st.cache_data(show_spinner="Loading the production demo wells...")
 def load_production_data():
     return load_sensor_data()
 
 
-@st.cache_data
+@st.cache_data(show_spinner="Loading the demo wells and scoring them...")
 def load_drilling_scored():
     """Sample telemetry with the detector's predictions. The detector never saw these wells."""
     return get_detector().predict(detector.prepare(load_drilling(), get_profile("drilling")))
 
 
-@st.cache_resource(show_spinner="Training the drilling detector on generated wells (about 10 s, once per server start)...")
+@st.cache_resource(show_spinner="Teaching the detector on simulated wells...")
 def get_detector():
     return detector.train_detector(get_profile("drilling"))
 
 
-@st.cache_data
+@st.cache_resource(show_spinner=False)
+def _startup_state():
+    """Remembers, per server process, whether the one-off set-up has finished."""
+    return {"ready": False}
+
+
+def ensure_ready():
+    """Explain the slow first start once, in plain words, instead of showing a bare spinner."""
+    state = _startup_state()
+    if state["ready"]:
+        return
+    with st.status(
+        "Getting the demo ready. This happens once after the server starts and takes about "
+        "15 seconds. The detector is learning from simulated wells, then scoring the demo wells.",
+        expanded=True,
+    ) as status:
+        get_detector()
+        load_drilling_scored()
+        status.update(label="Demo ready.", state="complete", expanded=False)
+    state["ready"] = True
+
+
+@st.cache_data(show_spinner="Loading the saved held-out results...")
 def load_heldout_metrics():
     try:
         return json.loads(HELDOUT_METRICS.read_text())
@@ -96,6 +118,7 @@ PROFILE_PAGES = ("Executive Dashboard", "Well Explorer", "AI Decision Center")
 
 if page in PROFILE_PAGES and profile_name == "drilling":
     try:
+        ensure_ready()
         scored = load_drilling_scored()
         det = get_detector()
     except Exception as exc:
