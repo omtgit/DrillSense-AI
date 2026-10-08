@@ -6,6 +6,7 @@ the rendered text, and numbers_are_grounded() rejects output that introduces new
 """
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -150,8 +151,13 @@ def render_report(f, profile=None):
 _NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
+def to_ascii_digits(text):
+    """Devanagari (and other Unicode) decimal digits to 0-9, so Hindi output is checked like English."""
+    return "".join(str(unicodedata.digit(c)) if c.isdecimal() else c for c in text)
+
+
 def _numbers(text):
-    return {m.rstrip(",").replace(",", "") for m in _NUM.findall(text)}
+    return {m.rstrip(",").replace(",", "") for m in _NUM.findall(to_ascii_digits(text))}
 
 
 def numbers_are_grounded(candidate, source):

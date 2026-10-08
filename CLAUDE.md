@@ -39,6 +39,9 @@ competition submission into a credible, free-to-run portfolio project with hones
 - No tests, no run instructions, no sample data, and `data/` + `models/` are gitignored, so nobody can reproduce the app from the repo.
 - Good: no secret patterns found in the 8-commit git history; `.env` is gitignored.
 
+## Owner decisions on docs
+- Do NOT add or restore a "Known limitations" section in `docs/PHYSICS.md`.
+
 ## Task plan (do in order; stop after each phase and summarise)
 **Phase 0 - hygiene (no behaviour change):** UTF-8 requirements without duplicates; README run steps; commit a small `data/sample/` (a few wells, a few days) so the app runs without cloud access.
 

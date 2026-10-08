@@ -117,17 +117,13 @@ def run_summary_frame(cfg, mode, budget):
 
 def render(st):
     st.header("Model Evaluation")
+    st.caption("Results come from simulated wells, so they compare methods with each other, not with real rigs.")
     res = load_results()
     if res is None:
         st.info("docs/eval_results.json not found. Generate it with `python scripts/evaluate.py` "
                 "(see docs/EVAL.md). The app never trains models.")
         return
     cfg = res["config"]
-    st.warning(
-        "**Synthetic data.** These numbers come from the seeded simulator in `generators/drilling.py`, not from "
-        "real rigs. They compare methods against each other on this simulator; they do not predict real-world "
-        "performance. See docs/EVAL.md, Limitations."
-    )
     with st.expander("How to read this page: five numbers, one sentence each"):
         for name, sentence in GUIDE:
             st.markdown(f"**{name}.** {sentence}")
