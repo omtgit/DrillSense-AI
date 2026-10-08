@@ -79,8 +79,8 @@ st.sidebar.title("Navigation")
 profile_label = st.sidebar.selectbox(
     "Domain profile",
     ["Drilling", "Production"],
-    help="Drilling: rig channels (WOB, SPP, flow in/out, pit volume...) from the seeded drilling "
-         "generator. Production: the original production-style synthetic dataset.",
+    help="Drilling: rig channels (WOB, SPP, flow in/out, pit volume...) from the built-in drilling "
+         "simulator. Production: the original production-style synthetic dataset.",
 )
 profile_name = profile_label.lower()
 
@@ -174,7 +174,7 @@ if page == "Executive Dashboard":
     c2.metric("Records",f"{total_records:,}")
 
     c3.metric(
-        "Average Health (from ground-truth severity)",
+        "Average Health (based on the planted severity)",
         f"{avg_health}%"
     )
 

@@ -46,13 +46,14 @@ def render_dashboard(scored, det):
     m4.metric("Events detected", f"{i['event_recall']:.0%}",
               help="The share of simulated incidents where the model raised at least one alarm during or just after it.")
     st.caption(
-        f"Trained on {i['train_wells']} generated wells ({i['train_rows']:,} rows, seed {i['train_seed']}); "
-        f"scored on {i['valid_wells']} other generated wells ({i['valid_rows']:,} rows, "
-        f"{i['valid_anomaly_rows']:,} injected anomaly rows, {i['valid_events']} events, seed {i['valid_seed']}). "
-        "A row is flagged when P(Normal) < 0.5; no threshold was tuned. 'Events detected' = events with at "
-        "least one flagged row inside the event or the 15 minutes after it. Recall is low because the first "
-        "minutes of every ramp are labelled anomalous but barely visible. Event-level results with false "
-        "alarms and baselines are on the Model Evaluation page."
+        f"The detector learned from {i['train_wells']} simulated wells and was then tested on "
+        f"{i['valid_wells']} different simulated wells it had never seen ({i['valid_rows']:,} readings, "
+        f"{i['valid_anomaly_rows']:,} of them inside one of {i['valid_events']} planted incidents). "
+        "A reading counts as an alarm when the model thinks it is more likely abnormal than normal; "
+        "that cut-off was not tuned. 'Events detected' counts an incident as caught if there was at "
+        "least one alarm during it or in the 15 minutes after. Recall is lower because the first minutes "
+        "of every incident are labelled as abnormal but barely visible in the data. The Model Evaluation "
+        "page has false alarms and comparisons with simpler methods."
     )
 
     st.divider()
