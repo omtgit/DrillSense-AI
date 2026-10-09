@@ -173,3 +173,99 @@ def test_devanagari_digits_are_normalised(monkeypatch):
     _patch(monkeypatch, "जोखिम स्कोर ९९ है।")
     ans, err = gemini_utils.answer_question(REPORT, "जोखिम क्या है?", "Hindi", "k")
     assert ans is None and "numbers" in err
+
+
+class ApiError(Exception):
+    def __init__(self, code, status="X"):
+        super().__init__(f"{code} {status}. " + '{"error": {"code": %d, "message": "high demand"}}' % code)
+        self.code = code
+
+
+def scripted_client(*outcomes):
+    """Each call pops the next outcome: an exception is raised, a string is returned as text."""
+    calls = []
+
+    def generate_content(model, contents):
+        calls.append(model)
+        out = outcomes[min(len(calls), len(outcomes)) - 1]
+        if isinstance(out, Exception):
+            raise out
+        return SimpleNamespace(text=out)
+
+    return SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)), calls
+
+
+def _setup(monkeypatch, *outcomes, fallback=""):
+    client, calls = scripted_client(*outcomes)
+    sleeps = []
+    monkeypatch.setattr(gemini_utils, "get_client", lambda key=None: client)
+    monkeypatch.setattr(gemini_utils, "_sleep", sleeps.append)
+    monkeypatch.setenv("GEMINI_FALLBACK_MODEL", fallback)
+    return calls, sleeps
+
+
+def test_retries_503_then_succeeds(monkeypatch):
+    calls, sleeps = _setup(monkeypatch, ApiError(503), ApiError(503), "ok 87.5")
+    text, err = gemini_utils.rephrase_report("report 87.5", "k", model="m1")
+    assert err is None and text == "ok 87.5" and text.model == "m1"
+    assert len(calls) == 3 and sleeps == [1, 2]
+
+
+def test_gives_up_after_three_retries_with_friendly_message(monkeypatch):
+    calls, sleeps = _setup(monkeypatch, ApiError(503, "UNAVAILABLE"))
+    text, err = gemini_utils.rephrase_report("report", "k", model="m1")
+    assert text == "report" and len(calls) == 4 and sleeps == [1, 2, 4]
+    assert err == gemini_utils.BUSY_MESSAGE
+    assert "{" not in err and "503" not in err
+    assert "high demand" in err.detail
+
+
+def test_500_is_retried_and_429_has_its_own_message(monkeypatch):
+    calls, _ = _setup(monkeypatch, ApiError(500))
+    _, err = gemini_utils.rephrase_report("report", "k")
+    assert len(calls) == 4 and err == gemini_utils.BUSY_MESSAGE
+    calls, _ = _setup(monkeypatch, ApiError(429, "RESOURCE_EXHAUSTED"))
+    _, err = gemini_utils.rephrase_report("report", "k")
+    assert len(calls) == 4 and err == gemini_utils.RATE_LIMIT_MESSAGE
+    assert "free-tier" in err and "{" not in err
+
+
+def test_client_errors_are_not_retried(monkeypatch):
+    for code in (400, 401, 403, 404):
+        calls, sleeps = _setup(monkeypatch, ApiError(code))
+        text, err = gemini_utils.rephrase_report("report", "k")
+        assert text == "report" and len(calls) == 1 and sleeps == [], code
+        assert "{" not in err
+
+
+def test_fallback_model_used_once_only_when_set(monkeypatch):
+    calls, _ = _setup(monkeypatch, ApiError(503), ApiError(503), ApiError(503), ApiError(503), "ok",
+                      fallback="backup-model")
+    text, err = gemini_utils.rephrase_report("report", "k", model="m1")
+    assert err is None and text == "ok" and text.model == "backup-model"
+    assert calls == ["m1"] * 4 + ["backup-model"]
+    # The fallback gets one attempt, not its own retries.
+    calls, _ = _setup(monkeypatch, ApiError(503), fallback="backup-model")
+    _, err = gemini_utils.rephrase_report("report", "k", model="m1")
+    assert calls == ["m1"] * 4 + ["backup-model"] and err == gemini_utils.BUSY_MESSAGE
+    # Not set (the default): no extra call. A 400 never reaches the fallback.
+    calls, _ = _setup(monkeypatch, ApiError(503))
+    gemini_utils.rephrase_report("report", "k", model="m1")
+    assert calls == ["m1"] * 4
+    calls, _ = _setup(monkeypatch, ApiError(400), fallback="backup-model")
+    gemini_utils.rephrase_report("report", "k", model="m1")
+    assert calls == ["m1"]
+
+
+def test_answer_question_keeps_friendly_message_and_detail(monkeypatch):
+    _setup(monkeypatch, ApiError(503))
+    ans, err = gemini_utils.answer_question(REPORT, "q", "English", "k")
+    assert ans is None and err == gemini_utils.BUSY_MESSAGE and err.detail
+
+
+def test_key_is_not_in_message_or_detail(monkeypatch):
+    _setup(monkeypatch, ApiError(401))
+    monkeypatch.setattr(gemini_utils, "get_client",
+                        lambda key=None: scripted_client(RuntimeError("bad key sk-secret 401"))[0])
+    _, err = gemini_utils.rephrase_report("report", "sk-secret")
+    assert "sk-secret" not in err and "sk-secret" not in err.detail

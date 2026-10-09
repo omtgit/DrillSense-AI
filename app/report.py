@@ -95,6 +95,50 @@ def build_finding(df, row, k=3, profile=None, rules_from_profile=False):
     return finding
 
 
+def _minutes(x):
+    return f"{x:.0f}" if float(x).is_integer() else f"{x:.1f}"
+
+
+def derive_facts(f):
+    """Comparisons worked out in code from the finding's own numbers; None when no event was detected.
+
+    Contributors are ranked by distance from this well's normal in robust standard deviations
+    (largest first). Duration is the span from the first to the last flagged reading.
+    """
+    if not f.get("detected"):
+        return None
+    ranked = [{"rank": i, "label": c["label"], "channel": c["channel"],
+               "direction": "above" if c["z"] > 0 else "below", "deviation": abs(c["z"]),
+               "baseline": c["baseline"], "observed": c["observed"]}
+              for i, c in enumerate(sorted(f["contributors"], key=lambda c: (-abs(c["z"]), c["channel"])), 1)]
+    span = (pd.Timestamp(f["end"]) - pd.Timestamp(f["start"])).total_seconds() / 60
+    return {"ranked": ranked, "start": f["start"], "end": f["end"], "duration_minutes": span,
+            "n_rows": f["n_rows"], "severity": f["severity"], "response": f["recommended_response"],
+            "rule_source": f.get("rule_source", GROUND_TRUTH_SOURCE), "anomaly": f["predicted_anomaly"],
+            "well_id": f["well_id"]}
+
+
+def render_derived_facts(f):
+    """The derived facts as text, appended to the report for the assistant (and its number check)."""
+    d = derive_facts(f)
+    if d is None:
+        return ""
+    lines = ["## Derived Facts",
+             "Signals ranked by distance from this well's normal, in robust standard deviations "
+             "(largest first):"]
+    for r in d["ranked"]:
+        lines.append(f"- Rank {r['rank']}: {r['label']}, {r['deviation']:.1f} robust standard deviations "
+                     f"{r['direction']} normal (mean {_fmt(r['observed'])} versus normal {_fmt(r['baseline'])}).")
+    if not d["ranked"]:
+        lines.append("- No channel stood out against this well's normal level.")
+    lines += [
+        f"Event start: {d['start']}. Event end: {d['end']}. Duration from first to last flagged reading: "
+        f"{_minutes(d['duration_minutes'])} minutes ({d['n_rows']} readings).",
+        f"Severity ({d['rule_source']}): {d['severity']}. Recommended response: {d['response']}.",
+    ]
+    return "\n".join(lines)
+
+
 def _fmt(x):
     return f"{x:,.2f}"
 
