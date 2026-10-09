@@ -12,7 +12,8 @@ from data_source import data_source_name, load_drilling, load_sensor_data
 from gemini_utils import model_name
 from profiles import get_profile
 from drilling_pages import HELP_F1, HELP_PRECISION, HELP_RECALL
-from ui import DOCS_URL, REPO_URL, footer, show_error
+from ui import (DOCS_URL, REPO_URL, apply_plotly_theme, footer,
+                inject_design_system, severity_chip_html, show_error)
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -23,6 +24,8 @@ st.set_page_config(
     page_icon=str(ASSETS_DIR / "logo.png") if (ASSETS_DIR / "logo.png").is_file() else "⛽",
     layout="wide"
 )
+inject_design_system()
+
 
 @st.cache_data(show_spinner="Loading the production demo wells...")
 def load_production_data():
@@ -167,22 +170,58 @@ if page == "Executive Dashboard":
         (df["predicted_risk_score"] == highest["predicted_risk_score"]).sum()
     )
 
+    st.markdown(
+        """
+        <div class="ds-hero">
+            <div class="ds-hero-title">📊 Executive Dashboard</div>
+            <p class="ds-hero-subtitle">Continuous oilfield surveillance, anomaly detection, and operational risk assessment.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Status strip: wells normal / watch / alarm
+    well_max_risk = df.groupby("well_id")["predicted_risk_score"].max()
+    n_alarm = int((well_max_risk >= 70).sum())
+    n_watch = int(((well_max_risk >= 30) & (well_max_risk < 70)).sum())
+    n_normal = int((well_max_risk < 30).sum())
+
+    st.markdown(
+        f"""
+        <div class="ds-status-strip">
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-success);">
+                <span class="ds-status-item-label">Normal Wells</span>
+                <span class="ds-status-item-val" style="color: #2ed573;">{n_normal}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-warning);">
+                <span class="ds-status-item-label">Watch List</span>
+                <span class="ds-status-item-val" style="color: #ffa502;">{n_watch}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-danger);">
+                <span class="ds-status-item-label">Active Alarms</span>
+                <span class="ds-status-item-val" style="color: #ff6b6b;">{n_alarm}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     c1,c2,c3 = st.columns(3)
 
-    c1.metric("Total Wells",total_wells)
+    c1.container(border=True).metric("Total Wells",total_wells)
 
-    c2.metric("Records",f"{total_records:,}")
+    c2.container(border=True).metric("Records",f"{total_records:,}")
 
-    c3.metric(
+    c3.container(border=True).metric(
         "Average Health (based on the planted severity)",
         f"{avg_health}%"
     )
 
     c4,c5 = st.columns(2)
 
-    c4.metric("Injected anomalies (ground truth)",f"{injected:,}")
+    c4.container(border=True).metric("Injected anomalies (ground truth)",f"{injected:,}")
 
-    c5.metric("Model detections (predicted \u2260 Normal)",f"{detected:,}")
+    c5.container(border=True).metric("Model detections (predicted \u2260 Normal)",f"{detected:,}")
 
     st.caption(
         "Data is synthetic. 'Injected' counts rows the generator labelled as anomalous. "
@@ -197,9 +236,9 @@ if page == "Executive Dashboard":
 
     if hm:
         h1,h2,h3 = st.columns(3)
-        h1.metric("Precision",f"{hm['precision']:.2f}",help=HELP_PRECISION)
-        h2.metric("Recall",f"{hm['recall']:.2f}",help=HELP_RECALL)
-        h3.metric("F1",f"{hm['f1']:.2f}",help=HELP_F1)
+        h1.container(border=True).metric("Precision",f"{hm['precision']:.2f}",help=HELP_PRECISION)
+        h2.container(border=True).metric("Recall",f"{hm['recall']:.2f}",help=HELP_RECALL)
+        h3.container(border=True).metric("F1",f"{hm['f1']:.2f}",help=HELP_F1)
         st.caption(
             f"Anomaly vs normal, scored on {len(hm['test_wells'])} wells "
             f"({hm['test_rows']:,} rows, {hm['test_anomaly_rows']:,} injected anomaly rows) "
@@ -218,24 +257,35 @@ if page == "Executive Dashboard":
 
     st.subheader("Highest Risk Well")
 
-    st.error(
-       f"""
-    Well ID: {highest['well_id']}
+    with st.container(border=True):
+        chip = severity_chip_html(highest['severity'])
+        st.markdown(
+            f"""
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:600; color:var(--ds-text); font-size:1.05rem;">Critical Telemetry Alert</span>
+                <div>{chip}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.error(
+           f"""
+        Well ID: {highest['well_id']}
 
-    Timestamp: {highest['timestamp']}
+        Timestamp: {highest['timestamp']}
 
-    Predicted Issue: {highest['predicted_anomaly']}
+        Predicted Issue: {highest['predicted_anomaly']}
 
-    Risk Score (0 to 100): {highest['predicted_risk_score']}
+        Risk Score (0 to 100): {highest['predicted_risk_score']}
 
-    Severity (ground truth): {highest['severity']}
-    """
-    )
+        Severity (ground truth): {highest['severity']}
+        """
+        )
 
-    st.caption(
-        f"{n_tied:,} rows tie at this risk score. Ties are broken by most recent "
-        "timestamp, then well id."
-    )
+        st.caption(
+            f"{n_tied:,} rows tie at this risk score. Ties are broken by most recent "
+            "timestamp, then well id."
+        )
 
     st.divider()
 
@@ -252,6 +302,7 @@ if page == "Executive Dashboard":
         title="Model-predicted anomaly distribution (all rows, including training rows)",
         labels={"predicted_anomaly": "Predicted issue", "Count": "Number of rows"}
     )
+    apply_plotly_theme(fig)
 
     st.plotly_chart(fig,width="stretch")
 
@@ -272,45 +323,97 @@ elif page == "Well Explorer":
 
     temp = df[df["well_id"]==selected]
 
-    fig1 = px.line(
-        temp,
-        x="timestamp",
-        y="pressure_psi",
-        title="Pressure",
-        labels=PROD_LABELS
-    )
+    tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
 
-    st.plotly_chart(fig1,width="stretch")
+    with tab_signals:
+        fig1 = px.line(
+            temp,
+            x="timestamp",
+            y="pressure_psi",
+            title="Pressure (psi)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig1)
+        fig1.update_layout(yaxis_title="Pressure (psi)", xaxis_title="Time")
+        st.plotly_chart(fig1, width="stretch")
 
-    fig2 = px.line(
-        temp,
-        x="timestamp",
-        y="flow_rate_bpd",
-        title="Flow Rate",
-        labels=PROD_LABELS
-    )
+        fig2 = px.line(
+            temp,
+            x="timestamp",
+            y="flow_rate_bpd",
+            title="Flow Rate (bpd)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig2)
+        fig2.update_layout(yaxis_title="Flow Rate (bpd)", xaxis_title="Time")
+        st.plotly_chart(fig2, width="stretch")
 
-    st.plotly_chart(fig2,width="stretch")
+        fig3 = px.line(
+            temp,
+            x="timestamp",
+            y="temperature_c",
+            title="Temperature (°C)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig3)
+        fig3.update_layout(yaxis_title="Temperature (°C)", xaxis_title="Time")
+        st.plotly_chart(fig3, width="stretch")
 
-    fig3 = px.line(
-        temp,
-        x="timestamp",
-        y="temperature_c",
-        title="Temperature",
-        labels=PROD_LABELS
-    )
+        fig4 = px.line(
+            temp,
+            x="timestamp",
+            y="vibration",
+            title="Vibration (g)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig4)
+        fig4.update_layout(yaxis_title="Vibration (g)", xaxis_title="Time")
+        st.plotly_chart(fig4, width="stretch")
 
-    st.plotly_chart(fig3,width="stretch")
+    with tab_events:
+        st.subheader("Ground truth vs model")
+        c_e1, c_e2, c_e3 = st.columns(3)
+        c_e1.container(border=True).metric("Well Readings", f"{len(temp):,}")
+        c_e2.container(border=True).metric("Injected Anomaly (rows)", int(temp["anomaly_flag"].sum()))
+        c_e3.container(border=True).metric("Model Detections (rows)", int((temp["predicted_anomaly"] != "Normal").sum()))
 
-    fig4 = px.line(
-        temp,
-        x="timestamp",
-        y="vibration",
-        title="Vibration",
-        labels=PROD_LABELS
-    )
+        anomaly_col = "anomaly_type" if "anomaly_type" in temp.columns else "severity"
+        strip = temp[temp["anomaly_flag"] == 1][["timestamp", anomaly_col]].rename(columns={anomaly_col: "type"})
+        strip["source"] = "Injected (ground truth)"
+        pred = temp[temp["predicted_anomaly"] != "Normal"][["timestamp", "predicted_anomaly"]].rename(columns={"predicted_anomaly": "type"})
+        pred["source"] = "Model prediction"
+        both = pd.concat([strip, pred])
+        if both.empty:
+            st.info("No injected or predicted anomalies for this well.")
+        else:
+            fig = px.scatter(
+                both, x="timestamp", y="source", color="type",
+                symbol="source",
+                symbol_map={"Model prediction": "circle", "Injected (ground truth)": "diamond"},
+                category_orders={"source": ["Model prediction", "Injected (ground truth)"]},
+                labels={"timestamp": "Time", "source": "Event Source", "type": "Anomaly Type"}
+            )
+            fig.update_traces(marker=dict(size=8))
+            apply_plotly_theme(fig)
+            fig.update_layout(yaxis_title="Source", xaxis_title="Time", height=280)
+            st.plotly_chart(fig, width="stretch")
+            st.caption("Each marker represents one observation. Diamonds: injected ground truth; Circles: model predictions.")
 
-    st.plotly_chart(fig4,width="stretch")
+    with tab_details:
+        st.subheader(f"Well {selected} Sensor Summary")
+        prod_channels = ["pressure_psi", "flow_rate_bpd", "temperature_c", "vibration"]
+        stats_rows = []
+        for ch in prod_channels:
+            if ch in temp.columns:
+                s = temp[ch]
+                stats_rows.append({
+                    "Sensor": PROD_LABELS.get(ch, ch),
+                    "Min": f"{s.min():.2f}",
+                    "Mean": f"{s.mean():.2f}",
+                    "Max": f"{s.max():.2f}",
+                    "Std Dev": f"{s.std():.2f}"
+                })
+        st.dataframe(pd.DataFrame(stats_rows), hide_index=True, width="stretch")
 
 # ===================================================
 # AI Decision Center
@@ -356,16 +459,16 @@ elif page == "AI Decision Center":
     row = top_risk[top_risk["well_id"] == selected].iloc[0]
 
     st.subheader("Incident Summary")
-
-    st.write(f"**Well** : {row['well_id']}")
-
-    st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
-
-    st.write(f"**Severity (ground truth)** : {row['severity']}")
-
-    st.write(f"**Risk Score** : {row['predicted_risk_score']}")
-
-    st.write(f"**Recommended Response (ground truth)** : {row['recommended_response']}")
+    with st.container(border=True):
+        col_is1, col_is2 = st.columns([3, 1])
+        with col_is1:
+            st.write(f"**Well** : {row['well_id']}")
+            st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
+            st.write(f"**Severity (ground truth)** : {row['severity']}")
+            st.write(f"**Risk Score** : {row['predicted_risk_score']}")
+            st.write(f"**Recommended Response (ground truth)** : {row['recommended_response']}")
+        with col_is2:
+            st.markdown(f'<div style="text-align:right;">{severity_chip_html(row["severity"])}</div>', unsafe_allow_html=True)
     
 
     report_section(df, row, get_profile("production"))
@@ -420,7 +523,13 @@ elif page == "CPU vs GPU Benchmark":
         ]
     }
 
-    st.table(pd.DataFrame(gpu))
+    b1, b2, b3 = st.columns(3)
+    b1.container(border=True).metric("CPU Read Time", "2.056 s", help="Pandas CSV read time on Google Colab")
+    b2.container(border=True).metric("GPU Read Time", "0.781 s", help="RAPIDS cuDF CSV read time on NVIDIA Tesla T4")
+    b3.container(border=True).metric("Measured Speed-up", "2.63x", help="Relative acceleration factor")
+
+    with st.container(border=True):
+        st.dataframe(pd.DataFrame(gpu), hide_index=True, width="stretch")
 
     st.caption(
         "Single run, numbers recorded at the time (see docs/BENCHMARKS.md); no repeats "
@@ -436,7 +545,8 @@ elif page == "About":
 
     st.header("About DrillSense AI")
 
-    st.markdown("""
+    with st.container(border=True):
+        st.markdown("""
 
 ### Learn more
 
