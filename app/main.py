@@ -12,7 +12,8 @@ from data_source import data_source_name, load_drilling, load_sensor_data
 from gemini_utils import model_name
 from profiles import get_profile
 from drilling_pages import HELP_F1, HELP_PRECISION, HELP_RECALL
-from ui import DOCS_URL, REPO_URL, footer, inject_design_system, show_error
+from ui import (DOCS_URL, REPO_URL, apply_plotly_theme, footer,
+                inject_design_system, severity_chip_html, show_error)
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -169,22 +170,58 @@ if page == "Executive Dashboard":
         (df["predicted_risk_score"] == highest["predicted_risk_score"]).sum()
     )
 
+    st.markdown(
+        """
+        <div class="ds-hero">
+            <div class="ds-hero-title">📊 Executive Dashboard</div>
+            <p class="ds-hero-subtitle">Continuous oilfield surveillance, anomaly detection, and operational risk assessment.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Status strip: wells normal / watch / alarm
+    well_max_risk = df.groupby("well_id")["predicted_risk_score"].max()
+    n_alarm = int((well_max_risk >= 70).sum())
+    n_watch = int(((well_max_risk >= 30) & (well_max_risk < 70)).sum())
+    n_normal = int((well_max_risk < 30).sum())
+
+    st.markdown(
+        f"""
+        <div class="ds-status-strip">
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-success);">
+                <span class="ds-status-item-label">Normal Wells</span>
+                <span class="ds-status-item-val" style="color: #2ed573;">{n_normal}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-warning);">
+                <span class="ds-status-item-label">Watch List</span>
+                <span class="ds-status-item-val" style="color: #ffa502;">{n_watch}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-danger);">
+                <span class="ds-status-item-label">Active Alarms</span>
+                <span class="ds-status-item-val" style="color: #ff6b6b;">{n_alarm}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     c1,c2,c3 = st.columns(3)
 
-    c1.metric("Total Wells",total_wells)
+    c1.container(border=True).metric("Total Wells",total_wells)
 
-    c2.metric("Records",f"{total_records:,}")
+    c2.container(border=True).metric("Records",f"{total_records:,}")
 
-    c3.metric(
+    c3.container(border=True).metric(
         "Average Health (based on the planted severity)",
         f"{avg_health}%"
     )
 
     c4,c5 = st.columns(2)
 
-    c4.metric("Injected anomalies (ground truth)",f"{injected:,}")
+    c4.container(border=True).metric("Injected anomalies (ground truth)",f"{injected:,}")
 
-    c5.metric("Model detections (predicted \u2260 Normal)",f"{detected:,}")
+    c5.container(border=True).metric("Model detections (predicted \u2260 Normal)",f"{detected:,}")
 
     st.caption(
         "Data is synthetic. 'Injected' counts rows the generator labelled as anomalous. "
@@ -199,9 +236,9 @@ if page == "Executive Dashboard":
 
     if hm:
         h1,h2,h3 = st.columns(3)
-        h1.metric("Precision",f"{hm['precision']:.2f}",help=HELP_PRECISION)
-        h2.metric("Recall",f"{hm['recall']:.2f}",help=HELP_RECALL)
-        h3.metric("F1",f"{hm['f1']:.2f}",help=HELP_F1)
+        h1.container(border=True).metric("Precision",f"{hm['precision']:.2f}",help=HELP_PRECISION)
+        h2.container(border=True).metric("Recall",f"{hm['recall']:.2f}",help=HELP_RECALL)
+        h3.container(border=True).metric("F1",f"{hm['f1']:.2f}",help=HELP_F1)
         st.caption(
             f"Anomaly vs normal, scored on {len(hm['test_wells'])} wells "
             f"({hm['test_rows']:,} rows, {hm['test_anomaly_rows']:,} injected anomaly rows) "
@@ -220,24 +257,35 @@ if page == "Executive Dashboard":
 
     st.subheader("Highest Risk Well")
 
-    st.error(
-       f"""
-    Well ID: {highest['well_id']}
+    with st.container(border=True):
+        chip = severity_chip_html(highest['severity'])
+        st.markdown(
+            f"""
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:600; color:var(--ds-text); font-size:1.05rem;">Critical Telemetry Alert</span>
+                <div>{chip}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.error(
+           f"""
+        Well ID: {highest['well_id']}
 
-    Timestamp: {highest['timestamp']}
+        Timestamp: {highest['timestamp']}
 
-    Predicted Issue: {highest['predicted_anomaly']}
+        Predicted Issue: {highest['predicted_anomaly']}
 
-    Risk Score (0 to 100): {highest['predicted_risk_score']}
+        Risk Score (0 to 100): {highest['predicted_risk_score']}
 
-    Severity (ground truth): {highest['severity']}
-    """
-    )
+        Severity (ground truth): {highest['severity']}
+        """
+        )
 
-    st.caption(
-        f"{n_tied:,} rows tie at this risk score. Ties are broken by most recent "
-        "timestamp, then well id."
-    )
+        st.caption(
+            f"{n_tied:,} rows tie at this risk score. Ties are broken by most recent "
+            "timestamp, then well id."
+        )
 
     st.divider()
 
@@ -254,6 +302,7 @@ if page == "Executive Dashboard":
         title="Model-predicted anomaly distribution (all rows, including training rows)",
         labels={"predicted_anomaly": "Predicted issue", "Count": "Number of rows"}
     )
+    apply_plotly_theme(fig)
 
     st.plotly_chart(fig,width="stretch")
 

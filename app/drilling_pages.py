@@ -9,6 +9,7 @@ import plotly.express as px
 import streamlit as st
 
 from report_ui import rank_by_risk, report_section
+from ui import apply_plotly_theme, severity_chip_html
 
 HELP_PRECISION = "Of the minutes the model flagged, the share that really were inside a simulated incident."
 HELP_RECALL = "Of the minutes inside a simulated incident, the share the model flagged."
@@ -24,13 +25,48 @@ def render_dashboard(scored, det):
     top = ranked.iloc[0]
     n_tied = int((scored["predicted_risk_score"] == top["predicted_risk_score"]).sum())
 
-    c1, c2 = st.columns(2)
-    c1.metric("Wells", scored["well_id"].nunique())
-    c2.metric("Records (1-minute)", f"{len(scored):,}")
+    st.markdown(
+        """
+        <div class="ds-hero">
+            <div class="ds-hero-title">📊 Executive Dashboard</div>
+            <p class="ds-hero-subtitle">Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    c4, c5 = st.columns(2)
-    c4.metric("Injected anomaly rows (ground truth)", f"{injected:,}")
-    c5.metric("Model detections (rows predicted ≠ Normal)", f"{detected:,}")
+    # Status strip: wells in normal, watch, and alarm states
+    well_max_risk = scored.groupby("well_id")["predicted_risk_score"].max()
+    n_alarm = int((well_max_risk >= 70).sum())
+    n_watch = int(((well_max_risk >= 30) & (well_max_risk < 70)).sum())
+    n_normal = int((well_max_risk < 30).sum())
+
+    st.markdown(
+        f"""
+        <div class="ds-status-strip">
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-success);">
+                <span class="ds-status-item-label">Normal Wells</span>
+                <span class="ds-status-item-val" style="color: #2ed573;">{n_normal}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-warning);">
+                <span class="ds-status-item-label">Watch List</span>
+                <span class="ds-status-item-val" style="color: #ffa502;">{n_watch}</span>
+            </div>
+            <div class="ds-status-item" style="border-left: 4px solid var(--ds-danger);">
+                <span class="ds-status-item-label">Active Alarms</span>
+                <span class="ds-status-item-val" style="color: #ff6b6b;">{n_alarm}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Operational KPI cards
+    c1, c2, c4, c5 = st.columns(4)
+    c1.container(border=True).metric("Wells", scored["well_id"].nunique())
+    c2.container(border=True).metric("Records (1-minute)", f"{len(scored):,}")
+    c4.container(border=True).metric("Injected anomaly rows (ground truth)", f"{injected:,}")
+    c5.container(border=True).metric("Model detections (rows predicted ≠ Normal)", f"{detected:,}")
     st.caption(
         "Data is synthetic. 'Injected' counts rows the generator labelled as inside an anomaly, "
         "including the faint first minutes of each ramp. 'Model detections' counts rows flagged by "
@@ -40,10 +76,10 @@ def render_dashboard(scored, det):
     i = det.info
     st.subheader("Detection quality on held-out generated wells")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Row precision", f"{i['precision']:.2f}", help=HELP_PRECISION)
-    m2.metric("Row recall", f"{i['recall']:.2f}", help=HELP_RECALL)
-    m3.metric("Row F1", f"{i['f1']:.2f}", help=HELP_F1)
-    m4.metric("Events detected", f"{i['event_recall']:.0%}",
+    m1.container(border=True).metric("Row precision", f"{i['precision']:.2f}", help=HELP_PRECISION)
+    m2.container(border=True).metric("Row recall", f"{i['recall']:.2f}", help=HELP_RECALL)
+    m3.container(border=True).metric("Row F1", f"{i['f1']:.2f}", help=HELP_F1)
+    m4.container(border=True).metric("Events detected", f"{i['event_recall']:.0%}",
               help="The share of simulated incidents where the model raised at least one alarm during or just after it.")
     st.caption(
         f"The detector learned from {i['train_wells']} simulated wells and was then tested on "
@@ -58,8 +94,19 @@ def render_dashboard(scored, det):
 
     st.divider()
     st.subheader("Highest Risk Well")
-    st.error(
-        f"""
+    with st.container(border=True):
+        chip = severity_chip_html(top['predicted_severity'])
+        st.markdown(
+            f"""
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:600; color:var(--ds-text); font-size:1.05rem;">Critical Telemetry Alert</span>
+                <div>{chip}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.error(
+            f"""
 Well ID: {top['well_id']}
 
 Timestamp: {top['timestamp']}
@@ -72,10 +119,10 @@ Severity (from the drilling rules, for the predicted issue): {top['predicted_sev
 
 Ground truth at this row: {top['anomaly_type']}
 """
-    )
-    st.caption(
-        f"{n_tied:,} rows share this risk score. Ties are broken by most recent timestamp, then well id."
-    )
+        )
+        st.caption(
+            f"{n_tied:,} rows share this risk score. Ties are broken by most recent timestamp, then well id."
+        )
 
     st.divider()
     labels = ["Normal"] + list(profile.anomaly_types)
@@ -91,6 +138,7 @@ Ground truth at this row: {top['anomaly_type']}
         title="Anomaly rows by type: injected vs predicted (Normal rows omitted)",
         labels={"class": "Anomaly type", "rows": "Number of one-minute rows", "source": "Source"},
     )
+    apply_plotly_theme(fig)
     st.plotly_chart(fig, width="stretch")
 
 
