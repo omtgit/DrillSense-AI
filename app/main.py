@@ -522,7 +522,13 @@ elif page == "CPU vs GPU Benchmark":
         ]
     }
 
-    st.table(pd.DataFrame(gpu))
+    b1, b2, b3 = st.columns(3)
+    b1.container(border=True).metric("CPU Read Time", "2.056 s", help="Pandas CSV read time on Google Colab")
+    b2.container(border=True).metric("GPU Read Time", "0.781 s", help="RAPIDS cuDF CSV read time on NVIDIA Tesla T4")
+    b3.container(border=True).metric("Measured Speed-up", "2.63x", help="Relative acceleration factor")
+
+    with st.container(border=True):
+        st.dataframe(pd.DataFrame(gpu), hide_index=True, width="stretch")
 
     st.caption(
         "Single run, numbers recorded at the time (see docs/BENCHMARKS.md); no repeats "
@@ -538,7 +544,8 @@ elif page == "About":
 
     st.header("About DrillSense AI")
 
-    st.markdown("""
+    with st.container(border=True):
+        st.markdown("""
 
 ### Learn more
 

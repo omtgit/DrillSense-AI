@@ -7,6 +7,7 @@ import plotly.express as px
 
 from labels import feature_label
 from profiles import get_profile
+from ui import apply_plotly_theme
 
 RESULTS = Path(__file__).resolve().parent.parent / "docs" / "eval_results.json"
 
@@ -136,10 +137,10 @@ def render(st):
 
     st.subheader("How this evaluation was run")
     t1, t2, t3, t4 = st.columns(4)
-    t1.metric("Repeats (random seeds)", len(cfg["seeds"]))
-    t2.metric("Wells per repeat", cfg["wells"])
-    t3.metric("Days per well", f"{cfg['days']:g}")
-    t4.metric("Simulated incidents in total", cfg["events_total"])
+    t1.container(border=True).metric("Repeats (random seeds)", len(cfg["seeds"]), help="Number of random seed repetitions to evaluate stability")
+    t2.container(border=True).metric("Wells per repeat", cfg["wells"], help="Number of distinct simulated wells per evaluation run")
+    t3.container(border=True).metric("Days per well", f"{cfg['days']:g}", help="Simulated duration in days for each well")
+    t4.container(border=True).metric("Simulated incidents in total", cfg["events_total"], help="Total count of planted operational incidents")
     st.table(run_summary_frame(cfg, mode, budget).set_index("Topic"))
     st.caption("Tables show the mean ± the spread (standard deviation) over the repeats.")
 
@@ -154,6 +155,7 @@ def render(st):
     fig = px.scatter(chart, x="False alarms / well-day", y="Events detected (%)", color="Method", text="Method")
     fig.update_traces(marker_size=14, textposition="top center")
     fig.update_layout(showlegend=False, yaxis_range=[0, 105])
+    apply_plotly_theme(fig)
     st.plotly_chart(fig, width="stretch")
 
     st.subheader("Where does it fail? Detection by anomaly type and incident size")
@@ -179,6 +181,7 @@ def render(st):
                      labels={"mean_abs_shap": "How much this feature moved the prediction", "Feature": ""})
         fig.update_traces(hovertemplate="%{y}<br>moved the prediction by %{x:.2f}<br>technical name: %{customdata[0]}"
                                         "<extra></extra>")
+        apply_plotly_theme(fig)
         st.plotly_chart(fig, width="stretch")
         fam = multi[typ]["family_share"]
         st.caption(f"Share of the model's attention by kind of signal: raw sensor readings {fam['raw']:.0%}, "
