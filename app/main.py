@@ -458,16 +458,16 @@ elif page == "AI Decision Center":
     row = top_risk[top_risk["well_id"] == selected].iloc[0]
 
     st.subheader("Incident Summary")
-
-    st.write(f"**Well** : {row['well_id']}")
-
-    st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
-
-    st.write(f"**Severity (ground truth)** : {row['severity']}")
-
-    st.write(f"**Risk Score** : {row['predicted_risk_score']}")
-
-    st.write(f"**Recommended Response (ground truth)** : {row['recommended_response']}")
+    with st.container(border=True):
+        col_is1, col_is2 = st.columns([3, 1])
+        with col_is1:
+            st.write(f"**Well** : {row['well_id']}")
+            st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
+            st.write(f"**Severity (ground truth)** : {row['severity']}")
+            st.write(f"**Risk Score** : {row['predicted_risk_score']}")
+            st.write(f"**Recommended Response (ground truth)** : {row['recommended_response']}")
+        with col_is2:
+            st.markdown(f'<div style="text-align:right;">{severity_chip_html(row["severity"])}</div>', unsafe_allow_html=True)
     
 
     report_section(df, row, get_profile("production"))

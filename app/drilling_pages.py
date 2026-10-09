@@ -239,11 +239,16 @@ def render_decision_center(scored, det):
     row = best[best["well_id"] == selected].iloc[0]
 
     st.subheader("Incident Summary")
-    st.write(f"**Well** : {row['well_id']}")
-    st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
-    st.write(f"**Severity (drilling rule)** : {row['predicted_severity']}")
-    st.write(f"**Risk Score** : {row['predicted_risk_score']}")
-    st.write(f"**Recommended Response (drilling rule)** : {row['predicted_response']}")
-    st.write(f"**Ground truth at this row** : {row['anomaly_type']}")
+    with st.container(border=True):
+        col_is1, col_is2 = st.columns([3, 1])
+        with col_is1:
+            st.write(f"**Well** : {row['well_id']}")
+            st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
+            st.write(f"**Severity (drilling rule)** : {row['predicted_severity']}")
+            st.write(f"**Risk Score** : {row['predicted_risk_score']}")
+            st.write(f"**Recommended Response (drilling rule)** : {row['predicted_response']}")
+            st.write(f"**Ground truth at this row** : {row['anomaly_type']}")
+        with col_is2:
+            st.markdown(f'<div style="text-align:right;">{severity_chip_html(row["predicted_severity"])}</div>', unsafe_allow_html=True)
 
     report_section(scored, row, profile, rules_from_profile=True)

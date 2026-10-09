@@ -5,6 +5,7 @@ from assistant import INSTANT_LABEL, SUGGESTED, gemini_label, instant_answer
 from gemini_utils import AUDIENCES, LANGUAGES, answer_question, has_key, model_name, write_for
 from waiting import run_with_status
 from report import build_finding, render_derived_facts, render_report
+from ui import severity_chip_html
 
 
 def rank_by_risk(frame):
@@ -32,11 +33,33 @@ def report_section(df, row, profile, rules_from_profile=False):
     finding = build_finding(df, row, profile=profile, rules_from_profile=rules_from_profile)
     template = render_report(finding, profile)
 
-    st.subheader("Engineering Report")
-    st.caption("Built from the detected event by a fixed template; no API involved.")
-    st.markdown(template)
+    severity = (
+        finding.get("severity")
+        or finding.get("predicted_severity")
+        or (row.get("predicted_severity") if "predicted_severity" in row else row.get("severity", "Medium"))
+    )
 
-    assistant_block(template, finding)
+    with st.container(border=True):
+        col_title, col_chip = st.columns([3, 1])
+        with col_title:
+            st.subheader("Engineering Report")
+            st.caption("Built from the detected event by a fixed template; no API involved.")
+        with col_chip:
+            chip = severity_chip_html(str(severity))
+            st.markdown(f'<div style="text-align:right; padding-top:12px;">{chip}</div>', unsafe_allow_html=True)
+
+        st.markdown(template)
+
+        st.download_button(
+            label="Download report (.md)",
+            data=template,
+            file_name=f"drillsense_report_{finding['well_id']}_{finding.get('start', 'event')}.md",
+            mime="text/markdown",
+            help="Download this incident report as a Markdown document",
+        )
+
+    with st.container(border=True):
+        assistant_block(template, finding)
 
 
 def assistant_block(template, finding):
