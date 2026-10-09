@@ -153,32 +153,64 @@ def render_explorer(scored, profile):
     selected = st.selectbox("Select Well", wells)
     temp = scored[scored["well_id"] == selected]
 
-    channels = list(profile.channels)
-    choice = st.multiselect(
-        "Channels", channels, default=[c for c in EXPLORER_DEFAULT if c in channels],
-        format_func=lambda c: profile.channels[c].report_label,
-    )
-    for ch in choice:
-        st.plotly_chart(
-            px.line(temp, x="timestamp", y=ch, title=profile.channels[ch].report_label,
-                    labels={"timestamp": "Time", ch: profile.channels[ch].report_label}),
-            width="stretch",
-        )
+    tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
 
-    st.subheader("Ground truth vs model")
-    strip = _runs_frame(temp, "anomaly_type", "Injected (ground truth)")
-    strip = strip.rename(columns={"class": "type"})
-    pred = _runs_frame(temp, "predicted_anomaly", "Model prediction").rename(columns={"class": "type"})
-    both = pd.concat([strip[["timestamp", "type", "source"]], pred[["timestamp", "type", "source"]]])
-    if both.empty:
-        st.info("No injected or predicted anomalies for this well.")
-        return
-    fig = px.scatter(both, x="timestamp", y="source", color="type",
-                     category_orders={"source": ["Model prediction", "Injected (ground truth)"]})
-    fig.update_traces(marker=dict(size=7, symbol="square"))
-    fig.update_layout(yaxis_title=None, height=260)
-    st.plotly_chart(fig, width="stretch")
-    st.caption("Each marker is one minute. Where the rows differ, the model missed it or raised a false alarm.")
+    with tab_signals:
+        channels = list(profile.channels)
+        choice = st.multiselect(
+            "Channels", channels, default=[c for c in EXPLORER_DEFAULT if c in channels],
+            format_func=lambda c: profile.channels[c].report_label,
+        )
+        for ch in choice:
+            lbl = profile.channels[ch].report_label
+            fig = px.line(temp, x="timestamp", y=ch, title=lbl,
+                          labels={"timestamp": "Time", ch: lbl})
+            apply_plotly_theme(fig)
+            fig.update_layout(yaxis_title=lbl, xaxis_title="Time")
+            st.plotly_chart(fig, width="stretch")
+
+    with tab_events:
+        st.subheader("Ground truth vs model")
+        c_e1, c_e2, c_e3 = st.columns(3)
+        c_e1.container(border=True).metric("Well Readings", f"{len(temp):,}")
+        c_e2.container(border=True).metric("Injected Anomaly (min)", int(temp["anomaly_flag"].sum()))
+        c_e3.container(border=True).metric("Model Detections (min)", int((temp["predicted_anomaly"] != "Normal").sum()))
+
+        strip = _runs_frame(temp, "anomaly_type", "Injected (ground truth)")
+        strip = strip.rename(columns={"class": "type"})
+        pred = _runs_frame(temp, "predicted_anomaly", "Model prediction").rename(columns={"class": "type"})
+        both = pd.concat([strip[["timestamp", "type", "source"]], pred[["timestamp", "type", "source"]]])
+        if both.empty:
+            st.info("No injected or predicted anomalies for this well.")
+        else:
+            fig = px.scatter(
+                both, x="timestamp", y="source", color="type",
+                symbol="source",
+                symbol_map={"Model prediction": "circle", "Injected (ground truth)": "diamond"},
+                category_orders={"source": ["Model prediction", "Injected (ground truth)"]},
+                labels={"timestamp": "Time", "source": "Event Source", "type": "Anomaly Type"}
+            )
+            fig.update_traces(marker=dict(size=8))
+            apply_plotly_theme(fig)
+            fig.update_layout(yaxis_title="Source", xaxis_title="Time", height=280)
+            st.plotly_chart(fig, width="stretch")
+            st.caption("Each marker is one minute. Diamonds represent injected ground truth; circles represent model predictions.")
+
+    with tab_details:
+        st.subheader(f"Well {selected} Telemetry Summary")
+        stats_rows = []
+        for ch, meta in profile.channels.items():
+            if ch in temp.columns:
+                s = temp[ch]
+                stats_rows.append({
+                    "Channel": meta.report_label,
+                    "Unit": meta.unit,
+                    "Min": f"{s.min():.2f}",
+                    "Mean": f"{s.mean():.2f}",
+                    "Max": f"{s.max():.2f}",
+                    "Std Dev": f"{s.std():.2f}"
+                })
+        st.dataframe(pd.DataFrame(stats_rows), hide_index=True, width="stretch")
 
 
 def render_decision_center(scored, det):

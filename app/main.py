@@ -323,45 +323,96 @@ elif page == "Well Explorer":
 
     temp = df[df["well_id"]==selected]
 
-    fig1 = px.line(
-        temp,
-        x="timestamp",
-        y="pressure_psi",
-        title="Pressure",
-        labels=PROD_LABELS
-    )
+    tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
 
-    st.plotly_chart(fig1,width="stretch")
+    with tab_signals:
+        fig1 = px.line(
+            temp,
+            x="timestamp",
+            y="pressure_psi",
+            title="Pressure (psi)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig1)
+        fig1.update_layout(yaxis_title="Pressure (psi)", xaxis_title="Time")
+        st.plotly_chart(fig1, width="stretch")
 
-    fig2 = px.line(
-        temp,
-        x="timestamp",
-        y="flow_rate_bpd",
-        title="Flow Rate",
-        labels=PROD_LABELS
-    )
+        fig2 = px.line(
+            temp,
+            x="timestamp",
+            y="flow_rate_bpd",
+            title="Flow Rate (bpd)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig2)
+        fig2.update_layout(yaxis_title="Flow Rate (bpd)", xaxis_title="Time")
+        st.plotly_chart(fig2, width="stretch")
 
-    st.plotly_chart(fig2,width="stretch")
+        fig3 = px.line(
+            temp,
+            x="timestamp",
+            y="temperature_c",
+            title="Temperature (°C)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig3)
+        fig3.update_layout(yaxis_title="Temperature (°C)", xaxis_title="Time")
+        st.plotly_chart(fig3, width="stretch")
 
-    fig3 = px.line(
-        temp,
-        x="timestamp",
-        y="temperature_c",
-        title="Temperature",
-        labels=PROD_LABELS
-    )
+        fig4 = px.line(
+            temp,
+            x="timestamp",
+            y="vibration",
+            title="Vibration (g)",
+            labels=PROD_LABELS
+        )
+        apply_plotly_theme(fig4)
+        fig4.update_layout(yaxis_title="Vibration (g)", xaxis_title="Time")
+        st.plotly_chart(fig4, width="stretch")
 
-    st.plotly_chart(fig3,width="stretch")
+    with tab_events:
+        st.subheader("Ground truth vs model")
+        c_e1, c_e2, c_e3 = st.columns(3)
+        c_e1.container(border=True).metric("Well Readings", f"{len(temp):,}")
+        c_e2.container(border=True).metric("Injected Anomaly (rows)", int(temp["anomaly_flag"].sum()))
+        c_e3.container(border=True).metric("Model Detections (rows)", int((temp["predicted_anomaly"] != "Normal").sum()))
 
-    fig4 = px.line(
-        temp,
-        x="timestamp",
-        y="vibration",
-        title="Vibration",
-        labels=PROD_LABELS
-    )
+        strip = temp[temp["anomaly_type"] != "Normal"][["timestamp", "anomaly_type"]].rename(columns={"anomaly_type": "type"})
+        strip["source"] = "Injected (ground truth)"
+        pred = temp[temp["predicted_anomaly"] != "Normal"][["timestamp", "predicted_anomaly"]].rename(columns={"predicted_anomaly": "type"})
+        pred["source"] = "Model prediction"
+        both = pd.concat([strip, pred])
+        if both.empty:
+            st.info("No injected or predicted anomalies for this well.")
+        else:
+            fig = px.scatter(
+                both, x="timestamp", y="source", color="type",
+                symbol="source",
+                symbol_map={"Model prediction": "circle", "Injected (ground truth)": "diamond"},
+                category_orders={"source": ["Model prediction", "Injected (ground truth)"]},
+                labels={"timestamp": "Time", "source": "Event Source", "type": "Anomaly Type"}
+            )
+            fig.update_traces(marker=dict(size=8))
+            apply_plotly_theme(fig)
+            fig.update_layout(yaxis_title="Source", xaxis_title="Time", height=280)
+            st.plotly_chart(fig, width="stretch")
+            st.caption("Each marker represents one observation. Diamonds: injected ground truth; Circles: model predictions.")
 
-    st.plotly_chart(fig4,width="stretch")
+    with tab_details:
+        st.subheader(f"Well {selected} Sensor Summary")
+        prod_channels = ["pressure_psi", "flow_rate_bpd", "temperature_c", "vibration"]
+        stats_rows = []
+        for ch in prod_channels:
+            if ch in temp.columns:
+                s = temp[ch]
+                stats_rows.append({
+                    "Sensor": PROD_LABELS.get(ch, ch),
+                    "Min": f"{s.min():.2f}",
+                    "Mean": f"{s.mean():.2f}",
+                    "Max": f"{s.max():.2f}",
+                    "Std Dev": f"{s.std():.2f}"
+                })
+        st.dataframe(pd.DataFrame(stats_rows), hide_index=True, width="stretch")
 
 # ===================================================
 # AI Decision Center
