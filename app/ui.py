@@ -228,7 +228,7 @@ def inject_design_system():
     st.markdown(css, unsafe_allow_html=True)
 
 
-def empty_state(message: str, icon: str = "🔍"):
+def empty_state(message: str, icon: str = "&#128269;"):
     """Displays a friendly, accessible empty state card."""
     st.markdown(
         f"""
@@ -247,7 +247,7 @@ def severity_chip_html(severity: str) -> str:
     style = SEVERITY_COLORS.get(clean, SEVERITY_COLORS["Medium"])
     return (
         f'<span class="ds-chip" style="background:{style["bg"]}; border:1px solid {style["border"]}; color:{style["text"]};">'
-        f'● {clean}</span>'
+        f'&#9679; {clean}</span>'
     )
 
 

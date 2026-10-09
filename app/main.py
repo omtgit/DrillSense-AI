@@ -377,7 +377,8 @@ elif page == "Well Explorer":
         c_e2.container(border=True).metric("Injected Anomaly (rows)", int(temp["anomaly_flag"].sum()))
         c_e3.container(border=True).metric("Model Detections (rows)", int((temp["predicted_anomaly"] != "Normal").sum()))
 
-        strip = temp[temp["anomaly_type"] != "Normal"][["timestamp", "anomaly_type"]].rename(columns={"anomaly_type": "type"})
+        anomaly_col = "anomaly_type" if "anomaly_type" in temp.columns else "severity"
+        strip = temp[temp["anomaly_flag"] == 1][["timestamp", anomaly_col]].rename(columns={anomaly_col: "type"})
         strip["source"] = "Injected (ground truth)"
         pred = temp[temp["predicted_anomaly"] != "Normal"][["timestamp", "predicted_anomaly"]].rename(columns={"predicted_anomaly": "type"})
         pred["source"] = "Model prediction"
