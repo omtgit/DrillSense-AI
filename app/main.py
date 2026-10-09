@@ -12,7 +12,7 @@ from data_source import data_source_name, load_drilling, load_sensor_data
 from gemini_utils import model_name
 from profiles import get_profile
 from drilling_pages import HELP_F1, HELP_PRECISION, HELP_RECALL
-from ui import DOCS_URL, REPO_URL, footer, show_error
+from ui import DOCS_URL, REPO_URL, footer, inject_design_system, show_error
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -23,6 +23,8 @@ st.set_page_config(
     page_icon=str(ASSETS_DIR / "logo.png") if (ASSETS_DIR / "logo.png").is_file() else "⛽",
     layout="wide"
 )
+inject_design_system()
+
 
 @st.cache_data(show_spinner="Loading the production demo wells...")
 def load_production_data():
