@@ -201,6 +201,19 @@ def inject_design_system():
         font-weight: 700;
     }
 
+    /* Responsive adjustments for mobile screens */
+    @media (max-width: 768px) {
+        .ds-status-strip {
+            flex-direction: column !important;
+        }
+        .ds-hero-title {
+            font-size: 1.45rem !important;
+        }
+        .ds-status-item {
+            width: 100% !important;
+        }
+    }
+
     /* Respect accessibility motion preference */
     @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -213,6 +226,19 @@ def inject_design_system():
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
+
+
+def empty_state(message: str, icon: str = "🔍"):
+    """Displays a friendly, accessible empty state card."""
+    st.markdown(
+        f"""
+        <div style="text-align:center; padding: 2rem 1rem; border: 1px dashed var(--ds-border, #30363d); border-radius: 8px; background: rgba(22, 27, 34, 0.4); margin: 1rem 0;">
+            <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">{icon}</div>
+            <p style="color: var(--ds-text-muted, #8b949e); margin: 0; font-size: 0.95rem;">{message}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def severity_chip_html(severity: str) -> str:
