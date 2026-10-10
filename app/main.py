@@ -326,49 +326,43 @@ elif page == "Well Explorer":
     tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
 
     with tab_signals:
-        fig1 = px.line(
-            temp,
-            x="timestamp",
-            y="pressure_psi",
-            title="Pressure (psi)",
-            labels=PROD_LABELS
-        )
-        apply_plotly_theme(fig1)
-        fig1.update_layout(yaxis_title="Pressure (psi)", xaxis_title="Time")
-        st.plotly_chart(fig1, width="stretch")
-
-        fig2 = px.line(
-            temp,
-            x="timestamp",
-            y="flow_rate_bpd",
-            title="Flow Rate (bpd)",
-            labels=PROD_LABELS
-        )
-        apply_plotly_theme(fig2)
-        fig2.update_layout(yaxis_title="Flow Rate (bpd)", xaxis_title="Time")
-        st.plotly_chart(fig2, width="stretch")
-
-        fig3 = px.line(
-            temp,
-            x="timestamp",
-            y="temperature_c",
-            title="Temperature (°C)",
-            labels=PROD_LABELS
-        )
-        apply_plotly_theme(fig3)
-        fig3.update_layout(yaxis_title="Temperature (°C)", xaxis_title="Time")
-        st.plotly_chart(fig3, width="stretch")
-
-        fig4 = px.line(
-            temp,
-            x="timestamp",
-            y="vibration",
-            title="Vibration (g)",
-            labels=PROD_LABELS
-        )
-        apply_plotly_theme(fig4)
-        fig4.update_layout(yaxis_title="Vibration (g)", xaxis_title="Time")
-        st.plotly_chart(fig4, width="stretch")
+        prod_sigs = [
+            ("pressure_psi", "Pressure (psi)"),
+            ("flow_rate_bpd", "Flow Rate (bpd)"),
+            ("temperature_c", "Temperature (°C)"),
+            ("vibration", "Vibration (g)"),
+        ]
+        for col, col_title in prod_sigs:
+            if col in temp.columns:
+                med = float(temp[col].median())
+                std = float(temp[col].std())
+                fig = px.line(
+                    temp,
+                    x="timestamp",
+                    y=col,
+                    title=f"{col_title} — Dynamic Operating Envelope",
+                    labels=PROD_LABELS
+                )
+                if std > 0:
+                    fig.add_hrect(
+                        y0=med - 2 * std,
+                        y1=med + 2 * std,
+                        fillcolor="rgba(16, 172, 132, 0.08)",
+                        line_width=0,
+                        annotation_text="Nominal Envelope (±2σ)",
+                        annotation_position="top left",
+                        annotation_font_size=10,
+                        annotation_font_color="#8b949e",
+                    )
+                fig.update_traces(
+                    fill="tozeroy",
+                    fillcolor="rgba(0, 210, 190, 0.04)",
+                    line=dict(color="#00d2be", width=2),
+                    hovertemplate="<b>%{x}</b><br>" + col_title + ": %{y:.2f}<extra></extra>",
+                )
+                apply_plotly_theme(fig)
+                fig.update_layout(yaxis_title=col_title, xaxis_title="Time", hovermode="x unified")
+                st.plotly_chart(fig, width="stretch")
 
     with tab_events:
         st.subheader("Ground truth vs model")

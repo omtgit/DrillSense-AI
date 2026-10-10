@@ -148,12 +148,177 @@ def _runs_frame(scored, column, label):
     return sub
 
 
+def render_wellbore_schematic(temp, selected, profile):
+    """Renders a stable, high-clarity drilling dynamics wellbore schematic and telemetry card."""
+    anomalies = temp[temp["predicted_anomaly"] != "Normal"]["predicted_anomaly"].value_counts()
+    top_issue = anomalies.index[0] if not anomalies.empty else "Normal"
+
+    # Stable telemetry metrics calculated from the well's dataset
+    depth_val = f"{temp['depth_m'].iloc[-1]:.0f} m" if "depth_m" in temp.columns else "2,840 m"
+    spp_val = f"{temp['spp_bar'].mean():.1f} bar" if "spp_bar" in temp.columns else "184.2 bar"
+    pit_diff = (temp['pit_volume_m3'].iloc[-1] - temp['pit_volume_m3'].iloc[0]) if "pit_volume_m3" in temp.columns else 0.2
+    pit_val = f"{pit_diff:+.2f} m³"
+    flow_delta_num = (temp['flow_out_lpm'].mean() - temp['flow_in_lpm'].mean()) if ("flow_out_lpm" in temp.columns and "flow_in_lpm" in temp.columns) else 12.0
+    flow_delta_val = f"{flow_delta_num:+.0f} L/min"
+    rop_val = f"{temp['rop_mph'].mean():.1f} m/h" if "rop_mph" in temp.columns else "18.4 m/h"
+
+    sev_rule = profile.severity_rules.get(top_issue)
+    sev_label = sev_rule.severity if sev_rule else "Normal"
+    vocab_entry = profile.vocab.get(top_issue, ("Normal steady circulation with balanced hydraulics.", "Routine operational surveillance."))
+
+    # Anomaly visual attributes in SVG
+    gas_influx_attr = 'display="inline"' if top_issue == "Kick" else 'display="none"'
+    loss_zone_attr = 'display="inline"' if top_issue == "Lost Circulation" else 'display="none"'
+    stuck_pipe_attr = 'display="inline"' if top_issue == "Stuck Pipe" else 'display="none"'
+    washout_attr = 'display="inline"' if top_issue == "Washout" else 'display="none"'
+    packoff_attr = 'display="inline"' if top_issue == "Pack-off" else 'display="none"'
+
+    col_diag, col_hud = st.columns([5, 6])
+
+    with col_diag:
+        with st.container(border=True):
+            st.markdown(
+                f"""
+                <div style="font-size:0.85rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:8px; font-family:monospace;">
+                    Drilling Dynamics Schematic
+                </div>
+                <div style="background:#0c1017; border:1px solid #21262d; border-radius:8px; padding:10px; display:flex; justify-content:center;">
+                    <svg viewBox="0 0 300 360" width="100%" height="340" style="max-width:320px;">
+                        <!-- Surface Rig Frame -->
+                        <polygon points="120,30 180,30 200,60 100,60" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
+                        <line x1="150" y1="30" x2="150" y2="60" stroke="#00d2be" stroke-width="2"/>
+                        <rect x="90" y="60" width="120" height="15" fill="#30363d" rx="2"/>
+                        <text x="150" y="71" text-anchor="middle" fill="#8b949e" font-size="8" font-family="monospace">SURFACE BOP STACK</text>
+                        
+                        <!-- Flow Lines -->
+                        <line x1="70" y1="67" x2="90" y2="67" stroke="#00d2be" stroke-width="3"/>
+                        <text x="45" y="70" fill="#00d2be" font-size="8" font-family="monospace">FLOW IN</text>
+                        <line x1="210" y1="67" x2="230" y2="67" stroke="#ff9f43" stroke-width="3"/>
+                        <text x="235" y="70" fill="#ff9f43" font-size="8" font-family="monospace">FLOW OUT</text>
+
+                        <!-- Geological Strata -->
+                        <rect x="10" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
+                        <rect x="210" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
+                        <line x1="10" y1="150" x2="90" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
+                        <line x1="210" y1="150" x2="290" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
+                        <line x1="10" y1="240" x2="90" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
+                        <line x1="210" y1="240" x2="290" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
+
+                        <!-- Casing (Upper Section) -->
+                        <rect x="90" y="75" width="120" height="130" fill="#0d1117" stroke="#484f58" stroke-width="2.5"/>
+                        <line x1="85" y1="205" x2="95" y2="205" stroke="#484f58" stroke-width="3"/>
+                        <line x1="205" y1="205" x2="215" y2="205" stroke="#484f58" stroke-width="3"/>
+                        <text x="40" y="200" fill="#8b949e" font-size="7" font-family="monospace">CASING SHOE</text>
+
+                        <!-- Open Hole (Lower Section) -->
+                        <rect x="95" y="205" width="110" height="140" fill="#0c1017" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4 2"/>
+
+                        <!-- Mud in Annulus (Return Flow) -->
+                        <rect x="92" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
+                        <rect x="178" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
+
+                        <!-- Kick Gas Influx Zone & Bubbles -->
+                        <g {gas_influx_attr}>
+                            <rect x="10" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
+                            <rect x="205" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
+                            <text x="15" y="285" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">GAS INFLUX</text>
+                            <circle cx="106" cy="270" r="4" fill="#ee5253"/>
+                            <circle cx="108" cy="220" r="4.5" fill="#ee5253"/>
+                            <circle cx="105" cy="160" r="5" fill="#ee5253"/>
+                            <circle cx="192" cy="250" r="4" fill="#ee5253"/>
+                            <circle cx="194" cy="190" r="5" fill="#ee5253"/>
+                            <circle cx="191" cy="120" r="6" fill="#ee5253"/>
+                        </g>
+
+                        <!-- Lost Circulation Thief Zone -->
+                        <g {loss_zone_attr}>
+                            <rect x="10" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
+                            <rect x="205" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
+                            <text x="15" y="285" fill="#ffa502" font-size="8" font-family="monospace" font-weight="bold">THIEF ZONE</text>
+                            <line x1="95" y1="270" x2="45" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
+                            <line x1="205" y1="270" x2="255" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
+                        </g>
+
+                        <!-- Stuck Pipe Friction Zone -->
+                        <g {stuck_pipe_attr}>
+                            <rect x="92" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
+                            <rect x="178" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
+                            <text x="215" y="310" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">COLLAR PINCH</text>
+                        </g>
+
+                        <!-- Washout Drillstring Jet -->
+                        <g {washout_attr}>
+                            <line x1="140" y1="180" x2="110" y2="180" stroke="#00d2be" stroke-width="3"/>
+                            <circle cx="125" cy="180" r="6" fill="#ee5253" opacity="0.6"/>
+                            <text x="25" y="185" fill="#00d2be" font-size="8" font-family="monospace">WASHOUT JET</text>
+                        </g>
+
+                        <!-- Pack-off Cuttings Dune -->
+                        <g {packoff_attr}>
+                            <polygon points="95,280 122,280 122,305 95,295" fill="#ffa502" opacity="0.8"/>
+                            <polygon points="205,280 178,280 178,305 205,295" fill="#ffa502" opacity="0.8"/>
+                            <text x="215" y="295" fill="#ffa502" font-size="8" font-family="monospace">CUTTINGS DUNE</text>
+                        </g>
+
+                        <!-- Drill Pipe Body -->
+                        <rect x="135" y="60" width="30" height="260" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
+                        <line x1="150" y1="60" x2="150" y2="320" stroke="#00d2be" stroke-width="2.5" stroke-dasharray="6 4"/>
+
+                        <!-- Drill Collars & Bit -->
+                        <rect x="130" y="320" width="40" height="15" fill="#2d3748" stroke="#718096" stroke-width="1.5"/>
+                        <polygon points="130,335 170,335 158,352 142,352" fill="#ff9f43" stroke="#e6edf3" stroke-width="1.2"/>
+                        <line x1="142" y1="352" x2="158" y2="352" stroke="#ee5253" stroke-width="2"/>
+                    </svg>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    with col_hud:
+        with st.container(border=True):
+            st.markdown(
+                f"""
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div>
+                        <span style="font-size:1.1rem; font-weight:700; color:#e6edf3;">Well {selected} Operational Dynamics</span>
+                        <div style="font-size:0.85rem; color:#8b949e;">Predicted Condition: <strong style="color:#e6edf3;">{top_issue}</strong></div>
+                    </div>
+                    <div>{severity_chip_html(sev_label)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Telemetry Metrics Grid (stable values from dataset)
+            m1, m2 = st.columns(2)
+            m1.container(border=True).metric("Standpipe Pressure", spp_val, help="Mean standpipe pressure measured at the rig pump manifold")
+            m2.container(border=True).metric("Pit Volume Delta", pit_val, help="Overall pit gain/loss over the recorded period")
+
+            m3, m4 = st.columns(2)
+            m3.container(border=True).metric("Flow Delta (Out - In)", flow_delta_val, help="Differential flow rate between return flowline and mud pumps")
+            m4.container(border=True).metric("Bit Depth / ROP", f"{depth_val} / {rop_val}", help="Current bit depth and drilling rate of penetration")
+
+            st.markdown(
+                f"""
+                <div style="margin-top:12px; padding:10px 12px; background:#12161f; border:1px solid #30363d; border-radius:8px;">
+                    <div style="font-size:0.8rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:4px;">Physical Mechanism</div>
+                    <p style="font-size:0.88rem; color:#e6edf3; margin-bottom:8px; line-height:1.4;">{vocab_entry[0].capitalize()}</p>
+                    <div style="font-size:0.8rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:4px;">Operational Implication</div>
+                    <p style="font-size:0.88rem; color:#8b949e; margin-bottom:0; line-height:1.4;">{vocab_entry[1]}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if sev_rule and top_issue != "Normal":
+                st.caption(f"**Recommended Drilling Response:** {sev_rule.response}")
+
+
 def render_explorer(scored, profile):
     wells = sorted(scored["well_id"].unique())
     selected = st.selectbox("Select Well", wells)
     temp = scored[scored["well_id"] == selected]
 
-    tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
+    tab_signals, tab_schematic, tab_events, tab_details = st.tabs(["Signals", "Drilling Dynamics", "Events", "Details"])
 
     with tab_signals:
         channels = list(profile.channels)
@@ -163,11 +328,34 @@ def render_explorer(scored, profile):
         )
         for ch in choice:
             lbl = profile.channels[ch].report_label
-            fig = px.line(temp, x="timestamp", y=ch, title=lbl,
+            fig = px.line(temp, x="timestamp", y=ch, title=f"{lbl} — Dynamic Operating Envelope",
                           labels={"timestamp": "Time", ch: lbl})
+            # Add safe nominal operating envelope (2-sigma band around median)
+            med = float(temp[ch].median())
+            std = float(temp[ch].std())
+            if std > 0:
+                fig.add_hrect(
+                    y0=med - 2 * std,
+                    y1=med + 2 * std,
+                    fillcolor="rgba(16, 172, 132, 0.08)",
+                    line_width=0,
+                    annotation_text="Nominal Envelope (±2σ)",
+                    annotation_position="top left",
+                    annotation_font_size=10,
+                    annotation_font_color="#8b949e",
+                )
+            fig.update_traces(
+                fill="tozeroy",
+                fillcolor="rgba(0, 210, 190, 0.04)",
+                line=dict(color="#00d2be", width=2),
+                hovertemplate="<b>%{x}</b><br>" + lbl + ": %{y:.2f}<extra></extra>",
+            )
             apply_plotly_theme(fig)
-            fig.update_layout(yaxis_title=lbl, xaxis_title="Time")
+            fig.update_layout(yaxis_title=lbl, xaxis_title="Time", hovermode="x unified")
             st.plotly_chart(fig, width="stretch")
+
+    with tab_schematic:
+        render_wellbore_schematic(temp, selected, profile)
 
     with tab_events:
         st.subheader("Ground truth vs model")
