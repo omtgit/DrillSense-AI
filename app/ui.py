@@ -96,11 +96,81 @@ def inject_design_system():
         transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
 
+    /* Enhanced Card hover lift and subtle glow */
     [data-testid="stVerticalBlockBorderWrapper"]:hover {
         transform: translateY(-2px);
-        border-color: var(--ds-border-light) !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        border-color: rgba(0, 210, 190, 0.45) !important;
+        box-shadow: 0 8px 24px -4px rgba(0, 210, 190, 0.15);
     }
+
+    /* Enhanced Tab Navigation */
+    [data-baseweb="tab-list"] {
+        gap: 8px !important;
+        border-bottom: 1px solid var(--ds-border) !important;
+        padding-bottom: 2px !important;
+    }
+    [data-baseweb="tab"] {
+        border-radius: var(--ds-radius-sm) !important;
+        padding: 8px 18px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+        background: transparent !important;
+    }
+    [data-baseweb="tab"]:hover {
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+    [data-baseweb="tab"][aria-selected="true"] {
+        background: rgba(0, 210, 190, 0.12) !important;
+        color: var(--ds-accent) !important;
+        border-bottom: 2px solid var(--ds-accent) !important;
+    }
+
+    /* Micro-Animations: Pulse, Radar, Mud Flow, Bubbles */
+    @keyframes dsPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.2); }
+    }
+    @keyframes dsRadar {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(238, 82, 83, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(238, 82, 83, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(238, 82, 83, 0); }
+    }
+    .ds-pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+        animation: dsPulse 2s infinite ease-in-out;
+    }
+    .ds-radar-alarm {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ee5253;
+        margin-right: 6px;
+        vertical-align: middle;
+        animation: dsRadar 1.8s infinite ease-in-out;
+    }
+    @keyframes dsMudFlow {
+        0% { stroke-dashoffset: 24; }
+        100% { stroke-dashoffset: 0; }
+    }
+    .ds-mud-flow {
+        stroke-dasharray: 6 6;
+        animation: dsMudFlow 0.9s linear infinite;
+    }
+    @keyframes dsBubbleRise {
+        0% { transform: translateY(70px) scale(0.6); opacity: 0; }
+        20% { opacity: 0.9; }
+        80% { opacity: 0.9; }
+        100% { transform: translateY(0px) scale(1.1); opacity: 0; }
+    }
+    .ds-bubble-1 { animation: dsBubbleRise 3.2s infinite ease-in; }
+    .ds-bubble-2 { animation: dsBubbleRise 3.8s 1.2s infinite ease-in; }
+    .ds-bubble-3 { animation: dsBubbleRise 2.9s 2.1s infinite ease-in; }
 
     /* Metric cards inside bordered containers */
     [data-testid="stMetric"] {

@@ -4,6 +4,8 @@
 anomaly_flag) sit next to model columns (predicted_*). The two are always labelled separately.
 Severity and response here come from the profile's rules for the PREDICTED class.
 """
+import textwrap
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -25,15 +27,13 @@ def render_dashboard(scored, det):
     top = ranked.iloc[0]
     n_tied = int((scored["predicted_risk_score"] == top["predicted_risk_score"]).sum())
 
-    st.markdown(
-        """
+    hero_html = """
         <div class="ds-hero">
-            <div class="ds-hero-title">📊 Executive Dashboard</div>
+            <div class="ds-hero-title">&#128202; Executive Dashboard</div>
             <p class="ds-hero-subtitle">Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment.</p>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """
+    st.markdown(textwrap.dedent(hero_html), unsafe_allow_html=True)
 
     # Status strip: wells in normal, watch, and alarm states
     well_max_risk = scored.groupby("well_id")["predicted_risk_score"].max()
@@ -41,25 +41,23 @@ def render_dashboard(scored, det):
     n_watch = int(((well_max_risk >= 30) & (well_max_risk < 70)).sum())
     n_normal = int((well_max_risk < 30).sum())
 
-    st.markdown(
-        f"""
+    status_strip_html = f"""
         <div class="ds-status-strip">
             <div class="ds-status-item" style="border-left: 4px solid var(--ds-success);">
-                <span class="ds-status-item-label">Normal Wells</span>
+                <span class="ds-status-item-label"><span class="ds-pulse-dot" style="background:#2ed573;"></span>Normal Wells</span>
                 <span class="ds-status-item-val" style="color: #2ed573;">{n_normal}</span>
             </div>
             <div class="ds-status-item" style="border-left: 4px solid var(--ds-warning);">
-                <span class="ds-status-item-label">Watch List</span>
+                <span class="ds-status-item-label"><span class="ds-pulse-dot" style="background:#ffa502;"></span>Watch List</span>
                 <span class="ds-status-item-val" style="color: #ffa502;">{n_watch}</span>
             </div>
             <div class="ds-status-item" style="border-left: 4px solid var(--ds-danger);">
-                <span class="ds-status-item-label">Active Alarms</span>
+                <span class="ds-status-item-label"><span class="ds-radar-alarm"></span>Active Alarms</span>
                 <span class="ds-status-item-val" style="color: #ff6b6b;">{n_alarm}</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """
+    st.markdown(textwrap.dedent(status_strip_html), unsafe_allow_html=True)
 
     # Operational KPI cards
     c1, c2, c4, c5 = st.columns(4)
@@ -96,15 +94,13 @@ def render_dashboard(scored, det):
     st.subheader("Highest Risk Well")
     with st.container(border=True):
         chip = severity_chip_html(top['predicted_severity'])
-        st.markdown(
-            f"""
+        alert_hdr = f"""
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <span style="font-weight:600; color:var(--ds-text); font-size:1.05rem;">Critical Telemetry Alert</span>
                 <div>{chip}</div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        """
+        st.markdown(textwrap.dedent(alert_hdr), unsafe_allow_html=True)
         st.error(
             f"""
 Well ID: {top['well_id']}
@@ -177,9 +173,8 @@ def render_wellbore_schematic(temp, selected, profile):
 
     with col_diag:
         with st.container(border=True):
-            st.markdown(
-                f"""
-                <div style="font-size:0.85rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:8px; font-family:monospace;">
+            svg_content = f"""
+                <div style="font-size:0.85rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:8px; font-family:monospace; letter-spacing:0.04em;">
                     Drilling Dynamics Schematic
                 </div>
                 <div style="background:#0c1017; border:1px solid #21262d; border-radius:8px; padding:10px; display:flex; justify-content:center;">
@@ -191,9 +186,9 @@ def render_wellbore_schematic(temp, selected, profile):
                         <text x="150" y="71" text-anchor="middle" fill="#8b949e" font-size="8" font-family="monospace">SURFACE BOP STACK</text>
                         
                         <!-- Flow Lines -->
-                        <line x1="70" y1="67" x2="90" y2="67" stroke="#00d2be" stroke-width="3"/>
+                        <line x1="70" y1="67" x2="90" y2="67" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
                         <text x="45" y="70" fill="#00d2be" font-size="8" font-family="monospace">FLOW IN</text>
-                        <line x1="210" y1="67" x2="230" y2="67" stroke="#ff9f43" stroke-width="3"/>
+                        <line x1="210" y1="67" x2="230" y2="67" stroke="#ff9f43" stroke-width="3" class="ds-mud-flow"/>
                         <text x="235" y="70" fill="#ff9f43" font-size="8" font-family="monospace">FLOW OUT</text>
 
                         <!-- Geological Strata -->
@@ -217,17 +212,17 @@ def render_wellbore_schematic(temp, selected, profile):
                         <rect x="92" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
                         <rect x="178" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
 
-                        <!-- Kick Gas Influx Zone & Bubbles -->
+                        <!-- Kick Gas Influx Zone & Rising Bubbles -->
                         <g {gas_influx_attr}>
                             <rect x="10" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
                             <rect x="205" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
                             <text x="15" y="285" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">GAS INFLUX</text>
-                            <circle cx="106" cy="270" r="4" fill="#ee5253"/>
-                            <circle cx="108" cy="220" r="4.5" fill="#ee5253"/>
-                            <circle cx="105" cy="160" r="5" fill="#ee5253"/>
-                            <circle cx="192" cy="250" r="4" fill="#ee5253"/>
-                            <circle cx="194" cy="190" r="5" fill="#ee5253"/>
-                            <circle cx="191" cy="120" r="6" fill="#ee5253"/>
+                            <circle cx="106" cy="270" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
+                            <circle cx="108" cy="220" r="5" fill="#ee5253" class="ds-bubble-2"/>
+                            <circle cx="105" cy="160" r="5.5" fill="#ee5253" class="ds-bubble-3"/>
+                            <circle cx="192" cy="250" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
+                            <circle cx="194" cy="190" r="5" fill="#ee5253" class="ds-bubble-2"/>
+                            <circle cx="191" cy="120" r="6" fill="#ee5253" class="ds-bubble-3"/>
                         </g>
 
                         <!-- Lost Circulation Thief Zone -->
@@ -248,7 +243,7 @@ def render_wellbore_schematic(temp, selected, profile):
 
                         <!-- Washout Drillstring Jet -->
                         <g {washout_attr}>
-                            <line x1="140" y1="180" x2="110" y2="180" stroke="#00d2be" stroke-width="3"/>
+                            <line x1="140" y1="180" x2="110" y2="180" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
                             <circle cx="125" cy="180" r="6" fill="#ee5253" opacity="0.6"/>
                             <text x="25" y="185" fill="#00d2be" font-size="8" font-family="monospace">WASHOUT JET</text>
                         </g>
@@ -262,7 +257,7 @@ def render_wellbore_schematic(temp, selected, profile):
 
                         <!-- Drill Pipe Body -->
                         <rect x="135" y="60" width="30" height="260" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
-                        <line x1="150" y1="60" x2="150" y2="320" stroke="#00d2be" stroke-width="2.5" stroke-dasharray="6 4"/>
+                        <line x1="150" y1="60" x2="150" y2="320" stroke="#00d2be" stroke-width="2.5" class="ds-mud-flow"/>
 
                         <!-- Drill Collars & Bit -->
                         <rect x="130" y="320" width="40" height="15" fill="#2d3748" stroke="#718096" stroke-width="1.5"/>
@@ -270,14 +265,12 @@ def render_wellbore_schematic(temp, selected, profile):
                         <line x1="142" y1="352" x2="158" y2="352" stroke="#ee5253" stroke-width="2"/>
                     </svg>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            """
+            st.markdown(textwrap.dedent(svg_content), unsafe_allow_html=True)
 
     with col_hud:
         with st.container(border=True):
-            st.markdown(
-                f"""
+            hud_header = f"""
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <div>
                         <span style="font-size:1.1rem; font-weight:700; color:#e6edf3;">Well {selected} Operational Dynamics</span>
@@ -285,9 +278,8 @@ def render_wellbore_schematic(temp, selected, profile):
                     </div>
                     <div>{severity_chip_html(sev_label)}</div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            """
+            st.markdown(textwrap.dedent(hud_header), unsafe_allow_html=True)
 
             # Telemetry Metrics Grid (stable values from dataset)
             m1, m2 = st.columns(2)
@@ -298,17 +290,15 @@ def render_wellbore_schematic(temp, selected, profile):
             m3.container(border=True).metric("Flow Delta (Out - In)", flow_delta_val, help="Differential flow rate between return flowline and mud pumps")
             m4.container(border=True).metric("Bit Depth / ROP", f"{depth_val} / {rop_val}", help="Current bit depth and drilling rate of penetration")
 
-            st.markdown(
-                f"""
+            hud_footer = f"""
                 <div style="margin-top:12px; padding:10px 12px; background:#12161f; border:1px solid #30363d; border-radius:8px;">
                     <div style="font-size:0.8rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:4px;">Physical Mechanism</div>
                     <p style="font-size:0.88rem; color:#e6edf3; margin-bottom:8px; line-height:1.4;">{vocab_entry[0].capitalize()}</p>
                     <div style="font-size:0.8rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:4px;">Operational Implication</div>
                     <p style="font-size:0.88rem; color:#8b949e; margin-bottom:0; line-height:1.4;">{vocab_entry[1]}</p>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            """
+            st.markdown(textwrap.dedent(hud_footer), unsafe_allow_html=True)
             if sev_rule and top_issue != "Normal":
                 st.caption(f"**Recommended Drilling Response:** {sev_rule.response}")
 
