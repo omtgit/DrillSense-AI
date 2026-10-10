@@ -9,6 +9,7 @@ import textwrap
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 
 from report_ui import rank_by_risk, report_section
 from ui import apply_plotly_theme, severity_chip_html
@@ -173,100 +174,148 @@ def render_wellbore_schematic(temp, selected, profile):
 
     with col_diag:
         with st.container(border=True):
-            svg_content = f"""
-                <div style="font-size:0.85rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:8px; font-family:monospace; letter-spacing:0.04em;">
-                    Drilling Dynamics Schematic
-                </div>
-                <div style="background:#0c1017; border:1px solid #21262d; border-radius:8px; padding:10px; display:flex; justify-content:center;">
-                    <svg viewBox="0 0 300 360" width="100%" height="340" style="max-width:320px;">
-                        <!-- Surface Rig Frame -->
-                        <polygon points="120,30 180,30 200,60 100,60" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
-                        <line x1="150" y1="30" x2="150" y2="60" stroke="#00d2be" stroke-width="2"/>
-                        <rect x="90" y="60" width="120" height="15" fill="#30363d" rx="2"/>
-                        <text x="150" y="71" text-anchor="middle" fill="#8b949e" font-size="8" font-family="monospace">SURFACE BOP STACK</text>
-                        
-                        <!-- Flow Lines -->
-                        <line x1="70" y1="67" x2="90" y2="67" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
-                        <text x="45" y="70" fill="#00d2be" font-size="8" font-family="monospace">FLOW IN</text>
-                        <line x1="210" y1="67" x2="230" y2="67" stroke="#ff9f43" stroke-width="3" class="ds-mud-flow"/>
-                        <text x="235" y="70" fill="#ff9f43" font-size="8" font-family="monospace">FLOW OUT</text>
+            st.markdown(
+                '<div style="font-size:0.85rem; font-weight:600; color:#8b949e; text-transform:uppercase; margin-bottom:8px; font-family:monospace; letter-spacing:0.04em;">'
+                'Drilling Dynamics Schematic</div>',
+                unsafe_allow_html=True,
+            )
+            html_schematic = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {{
+    margin: 0;
+    padding: 0;
+    background: #0c1017;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    overflow: hidden;
+  }}
+  .box {{
+    width: 100%;
+    max-width: 320px;
+    background: #0c1017;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 8px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+  }}
+  @keyframes dsMudFlow {{
+    0% {{ stroke-dashoffset: 24; }}
+    100% {{ stroke-dashoffset: 0; }}
+  }}
+  .ds-mud-flow {{
+    stroke-dasharray: 6 6;
+    animation: dsMudFlow 0.9s linear infinite;
+  }}
+  @keyframes dsBubbleRise {{
+    0% {{ transform: translateY(70px) scale(0.6); opacity: 0; }}
+    20% {{ opacity: 0.9; }}
+    80% {{ opacity: 0.9; }}
+    100% {{ transform: translateY(0px) scale(1.1); opacity: 0; }}
+  }}
+  .ds-bubble-1 {{ animation: dsBubbleRise 3.2s infinite ease-in; }}
+  .ds-bubble-2 {{ animation: dsBubbleRise 3.8s 1.2s infinite ease-in; }}
+  .ds-bubble-3 {{ animation: dsBubbleRise 2.9s 2.1s infinite ease-in; }}
+</style>
+</head>
+<body>
+<div class="box">
+<svg viewBox="0 0 300 360" width="100%" height="340" style="max-width:300px;">
+    <!-- Surface Rig Frame -->
+    <polygon points="120,30 180,30 200,60 100,60" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
+    <line x1="150" y1="30" x2="150" y2="60" stroke="#00d2be" stroke-width="2"/>
+    <rect x="90" y="60" width="120" height="15" fill="#30363d" rx="2"/>
+    <text x="150" y="71" text-anchor="middle" fill="#8b949e" font-size="8" font-family="monospace">SURFACE BOP STACK</text>
+    
+    <!-- Flow Lines -->
+    <line x1="70" y1="67" x2="90" y2="67" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
+    <text x="45" y="70" fill="#00d2be" font-size="8" font-family="monospace">FLOW IN</text>
+    <line x1="210" y1="67" x2="230" y2="67" stroke="#ff9f43" stroke-width="3" class="ds-mud-flow"/>
+    <text x="235" y="70" fill="#ff9f43" font-size="8" font-family="monospace">FLOW OUT</text>
 
-                        <!-- Geological Strata -->
-                        <rect x="10" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
-                        <rect x="210" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
-                        <line x1="10" y1="150" x2="90" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
-                        <line x1="210" y1="150" x2="290" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
-                        <line x1="10" y1="240" x2="90" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
-                        <line x1="210" y1="240" x2="290" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
+    <!-- Geological Strata -->
+    <rect x="10" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
+    <rect x="210" y="75" width="80" height="270" fill="#151b23" opacity="0.6"/>
+    <line x1="10" y1="150" x2="90" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
+    <line x1="210" y1="150" x2="290" y2="150" stroke="#21262d" stroke-dasharray="3 3"/>
+    <line x1="10" y1="240" x2="90" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
+    <line x1="210" y1="240" x2="290" y2="240" stroke="#21262d" stroke-dasharray="3 3"/>
 
-                        <!-- Casing (Upper Section) -->
-                        <rect x="90" y="75" width="120" height="130" fill="#0d1117" stroke="#484f58" stroke-width="2.5"/>
-                        <line x1="85" y1="205" x2="95" y2="205" stroke="#484f58" stroke-width="3"/>
-                        <line x1="205" y1="205" x2="215" y2="205" stroke="#484f58" stroke-width="3"/>
-                        <text x="40" y="200" fill="#8b949e" font-size="7" font-family="monospace">CASING SHOE</text>
+    <!-- Casing (Upper Section) -->
+    <rect x="90" y="75" width="120" height="130" fill="#0d1117" stroke="#484f58" stroke-width="2.5"/>
+    <line x1="85" y1="205" x2="95" y2="205" stroke="#484f58" stroke-width="3"/>
+    <line x1="205" y1="205" x2="215" y2="205" stroke="#484f58" stroke-width="3"/>
+    <text x="40" y="200" fill="#8b949e" font-size="7" font-family="monospace">CASING SHOE</text>
 
-                        <!-- Open Hole (Lower Section) -->
-                        <rect x="95" y="205" width="110" height="140" fill="#0c1017" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4 2"/>
+    <!-- Open Hole (Lower Section) -->
+    <rect x="95" y="205" width="110" height="140" fill="#0c1017" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4 2"/>
 
-                        <!-- Mud in Annulus (Return Flow) -->
-                        <rect x="92" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
-                        <rect x="178" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
+    <!-- Mud in Annulus (Return Flow) -->
+    <rect x="92" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
+    <rect x="178" y="75" width="30" height="268" fill="rgba(0, 210, 190, 0.08)"/>
 
-                        <!-- Kick Gas Influx Zone & Rising Bubbles -->
-                        <g {gas_influx_attr}>
-                            <rect x="10" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
-                            <rect x="205" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
-                            <text x="15" y="285" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">GAS INFLUX</text>
-                            <circle cx="106" cy="270" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
-                            <circle cx="108" cy="220" r="5" fill="#ee5253" class="ds-bubble-2"/>
-                            <circle cx="105" cy="160" r="5.5" fill="#ee5253" class="ds-bubble-3"/>
-                            <circle cx="192" cy="250" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
-                            <circle cx="194" cy="190" r="5" fill="#ee5253" class="ds-bubble-2"/>
-                            <circle cx="191" cy="120" r="6" fill="#ee5253" class="ds-bubble-3"/>
-                        </g>
+    <!-- Kick Gas Influx Zone & Rising Bubbles -->
+    <g {gas_influx_attr}>
+        <rect x="10" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
+        <rect x="205" y="250" width="85" height="60" fill="rgba(238, 82, 83, 0.3)"/>
+        <text x="15" y="285" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">GAS INFLUX</text>
+        <circle cx="106" cy="270" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
+        <circle cx="108" cy="220" r="5" fill="#ee5253" class="ds-bubble-2"/>
+        <circle cx="105" cy="160" r="5.5" fill="#ee5253" class="ds-bubble-3"/>
+        <circle cx="192" cy="250" r="4.5" fill="#ee5253" class="ds-bubble-1"/>
+        <circle cx="194" cy="190" r="5" fill="#ee5253" class="ds-bubble-2"/>
+        <circle cx="191" cy="120" r="6" fill="#ee5253" class="ds-bubble-3"/>
+    </g>
 
-                        <!-- Lost Circulation Thief Zone -->
-                        <g {loss_zone_attr}>
-                            <rect x="10" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
-                            <rect x="205" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
-                            <text x="15" y="285" fill="#ffa502" font-size="8" font-family="monospace" font-weight="bold">THIEF ZONE</text>
-                            <line x1="95" y1="270" x2="45" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
-                            <line x1="205" y1="270" x2="255" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
-                        </g>
+    <!-- Lost Circulation Thief Zone -->
+    <g {loss_zone_attr}>
+        <rect x="10" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
+        <rect x="205" y="250" width="85" height="60" fill="rgba(255, 159, 67, 0.25)"/>
+        <text x="15" y="285" fill="#ffa502" font-size="8" font-family="monospace" font-weight="bold">THIEF ZONE</text>
+        <line x1="95" y1="270" x2="45" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
+        <line x1="205" y1="270" x2="255" y2="270" stroke="#ffa502" stroke-width="2" stroke-dasharray="3 3"/>
+    </g>
 
-                        <!-- Stuck Pipe Friction Zone -->
-                        <g {stuck_pipe_attr}>
-                            <rect x="92" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
-                            <rect x="178" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
-                            <text x="215" y="310" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">COLLAR PINCH</text>
-                        </g>
+    <!-- Stuck Pipe Friction Zone -->
+    <g {stuck_pipe_attr}>
+        <rect x="92" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
+        <rect x="178" y="290" width="30" height="35" fill="rgba(238, 82, 83, 0.4)"/>
+        <text x="215" y="310" fill="#ff6b6b" font-size="8" font-family="monospace" font-weight="bold">COLLAR PINCH</text>
+    </g>
 
-                        <!-- Washout Drillstring Jet -->
-                        <g {washout_attr}>
-                            <line x1="140" y1="180" x2="110" y2="180" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
-                            <circle cx="125" cy="180" r="6" fill="#ee5253" opacity="0.6"/>
-                            <text x="25" y="185" fill="#00d2be" font-size="8" font-family="monospace">WASHOUT JET</text>
-                        </g>
+    <!-- Washout Drillstring Jet -->
+    <g {washout_attr}>
+        <line x1="140" y1="180" x2="110" y2="180" stroke="#00d2be" stroke-width="3" class="ds-mud-flow"/>
+        <circle cx="125" cy="180" r="6" fill="#ee5253" opacity="0.6"/>
+        <text x="25" y="185" fill="#00d2be" font-size="8" font-family="monospace">WASHOUT JET</text>
+    </g>
 
-                        <!-- Pack-off Cuttings Dune -->
-                        <g {packoff_attr}>
-                            <polygon points="95,280 122,280 122,305 95,295" fill="#ffa502" opacity="0.8"/>
-                            <polygon points="205,280 178,280 178,305 205,295" fill="#ffa502" opacity="0.8"/>
-                            <text x="215" y="295" fill="#ffa502" font-size="8" font-family="monospace">CUTTINGS DUNE</text>
-                        </g>
+    <!-- Pack-off Cuttings Dune -->
+    <g {packoff_attr}>
+        <polygon points="95,280 122,280 122,305 95,295" fill="#ffa502" opacity="0.8"/>
+        <polygon points="205,280 178,280 178,305 205,295" fill="#ffa502" opacity="0.8"/>
+        <text x="215" y="295" fill="#ffa502" font-size="8" font-family="monospace">CUTTINGS DUNE</text>
+    </g>
 
-                        <!-- Drill Pipe Body -->
-                        <rect x="135" y="60" width="30" height="260" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
-                        <line x1="150" y1="60" x2="150" y2="320" stroke="#00d2be" stroke-width="2.5" class="ds-mud-flow"/>
+    <!-- Drill Pipe Body -->
+    <rect x="135" y="60" width="30" height="260" fill="#1c2128" stroke="#484f58" stroke-width="1.5"/>
+    <line x1="150" y1="60" x2="150" y2="320" stroke="#00d2be" stroke-width="2.5" class="ds-mud-flow"/>
 
-                        <!-- Drill Collars & Bit -->
-                        <rect x="130" y="320" width="40" height="15" fill="#2d3748" stroke="#718096" stroke-width="1.5"/>
-                        <polygon points="130,335 170,335 158,352 142,352" fill="#ff9f43" stroke="#e6edf3" stroke-width="1.2"/>
-                        <line x1="142" y1="352" x2="158" y2="352" stroke="#ee5253" stroke-width="2"/>
-                    </svg>
-                </div>
-            """
-            st.markdown(textwrap.dedent(svg_content), unsafe_allow_html=True)
+    <!-- Drill Collars & Bit -->
+    <rect x="130" y="320" width="40" height="15" fill="#2d3748" stroke="#718096" stroke-width="1.5"/>
+    <polygon points="130,335 170,335 158,352 142,352" fill="#ff9f43" stroke="#e6edf3" stroke-width="1.2"/>
+    <line x1="142" y1="352" x2="158" y2="352" stroke="#ee5253" stroke-width="2"/>
+</svg>
+</div>
+</body>
+</html>"""
+            components.html(html_schematic, height=360, scrolling=False)
 
     with col_hud:
         with st.container(border=True):
