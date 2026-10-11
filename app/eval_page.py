@@ -14,6 +14,7 @@ RESULTS = Path(__file__).resolve().parent.parent / "docs" / "eval_results.json"
 LABELS = {
     "zscore|raw": "Per-well robust z-score",
     "rule|physics": "Physics rule (flow delta + pit rate)",
+    "mahalanobis|physics": "Mahalanobis distance (normal residuals)",
     "iforest|physics_only": "Isolation Forest (physics features)",
     "xgb_bin|raw+physics+context": "XGBoost binary",
     "xgb_multi|raw+physics+context": "XGBoost multiclass",
@@ -43,6 +44,8 @@ def _ms(m, digits=3, pct=False):
 def headline_frame(res, mode, budget):
     rows = []
     for key, label in LABELS.items():
+        if key not in res["summary"][mode]:
+            continue
         e = res["summary"][mode][key]
         b = e["by_budget"][budget]
         rows.append({
@@ -57,11 +60,13 @@ def headline_frame(res, mode, budget):
 
 
 def breakdown_frame(res, mode, budget, key):
-    names = list(res["summary"][mode][next(iter(LABELS))][key])
+    avail_labels = {k: v for k, v in LABELS.items() if k in res["summary"][mode]}
+    first_k = next(iter(avail_labels))
+    names = list(res["summary"][mode][first_k][key])
     rows = []
     for nm in names:
         row = {"Group": nm}
-        for k, label in LABELS.items():
+        for k, label in avail_labels.items():
             e = res["summary"][mode][k][key][nm]["budgets"][budget]
             row[label] = "n/a" if e["detect_share"] is None else f"{e['detect_share']:.0%} ({e['detected']}/{e['n']})"
         rows.append(row)
@@ -151,7 +156,8 @@ def render(st):
 
     d = res["summary"][mode]
     chart = pd.DataFrame([{"Method": LABELS[k], "Events detected (%)": d[k]["by_budget"][budget]["detect_share"]["mean"] * 100,
-                           "False alarms / well-day": d[k]["by_budget"][budget]["fa_per_well_day"]["mean"]} for k in LABELS])
+                           "False alarms / well-day": d[k]["by_budget"][budget]["fa_per_well_day"]["mean"]}
+                          for k in LABELS if k in d])
     fig = px.scatter(chart, x="False alarms / well-day", y="Events detected (%)", color="Method", text="Method")
     fig.update_traces(marker_size=14, textposition="top center")
     fig.update_layout(showlegend=False, yaxis_range=[0, 105])
@@ -189,6 +195,33 @@ def render(st):
                    "Longer bars mean the feature pushed the prediction harder (mean absolute SHAP value, in "
                    "log-odds, per feature). Only past readings are used, never future ones.")
     with st.expander("Technical details (for reproducibility)"):
+        st.markdown(
+            """
+**Verification & Reproduction Commands** (Run from project root):
+
+1. **Quick Smoke Run** (~2 min run on 6 wells to verify all models and data pipelines):
+```bash
+python scripts/evaluate.py --quick --out docs/eval_results_quick.json
+```
+
+2. **Full Evaluation on Fresh Seeds** (Runs the multi-seed benchmark across seeds 100–104):
+```bash
+python scripts/evaluate.py --seeds 100 101 102 103 104 --out docs/eval_results.json
+```
+
+3. **Re-render Documentation Tables**:
+```bash
+python scripts/evaluate.py --render
+```
+
+4. **Run Unit Test Suite** (All 124 unit tests):
+```bash
+python -m pytest tests
+```
+*Note: No private credentials or live cloud endpoints are needed; evaluation runs purely on seeded telemetry.*
+"""
+        )
+
         st.json({k: cfg[k] for k in ("wells", "days", "events_per_day", "seeds", "time_cut", "outer_folds",
-                                       "inner_folds", "merge_gap_min", "grace_min", "xgb_rounds", "versions")},
+                                       "inner_folds", "merge_gap_min", "grace_min", "xgb_rounds", "versions") if k in cfg},
                 expanded=False)

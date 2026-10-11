@@ -152,10 +152,28 @@ No cloud account or API key is needed. By default the app reads the committed sa
 | `GEMINI_API_KEY` | unset | Optional. Only used by the optional AI assistant; a key pasted in the sidebar takes precedence. The template report works without it |
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Default model for rephrasing; also editable in the sidebar. Not verified against a live key; a 404 shows a "try another model name" message |
 
-Run the tests with `pip install pytest && python -m pytest tests`.
+### Model Evaluation & Reproduction
+
+To evaluate the anomaly detection models and baselines:
+
+```bash
+# Quick smoke evaluation (~2 min run on 6 wells)
+python scripts/evaluate.py --quick --out docs/eval_results_quick.json
+
+# Full evaluation across fresh seeds (seeds 100–104)
+python scripts/evaluate.py --seeds 100 101 102 103 104 --out docs/eval_results.json
+
+# Rebuild evaluation tables in docs/EVAL.md from results
+python scripts/evaluate.py --render
+
+# Run complete test suite (all unit tests)
+python -m pytest tests
+```
+Detailed methodology, baselines, and ablation tables are available in [`docs/EVAL.md`](docs/EVAL.md).
 
 To run on the full dataset after the pipeline above, set
 `LOCAL_DATA_PATH=data/processed/drillsense_processed_data.csv` (written by notebook 03).
+
 
 ### Domain profiles and the drilling generator
 
