@@ -1,0 +1,71 @@
+# Sample CSV Column Mapping Configuration for DrillSense AI
+# Format: client_column_name -> standardized profile channel
+well_id_column: "well_id"
+timestamp_column: "timestamp"
+
+channels:
+  # Drill bit depth
+  depth:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+
+  # Weight on bit: client in kips (1 kip = 4.44822 kN)
+  wob:
+    target_channel: "wob_kn"
+    scale: 1.0
+    offset: 0.0
+
+  # Rotary speed (rpm)
+  rotary_speed:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+
+  # Surface Torque (kN.m)
+  torque:
+    target_channel: "torque_knm"
+    scale: 1.0
+    offset: 0.0
+
+  # Rate of penetration (m/h)
+  rop:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+
+  # Standpipe pressure: client in psi (1 psi = 0.0689476 bar)
+  standpipe_press:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+
+  # Flow in (L/min)
+  pump_flow_in:
+    target_channel: "flow_in_lpm"
+    scale: 1.0
+    offset: 0.0
+
+  # Return flow out (L/min)
+  return_flow_out:
+    target_channel: "flow_out_lpm"
+    scale: 1.0
+    offset: 0.0
+
+  # Active pit volume (m3)
+  active_pits:
+    target_channel: "pit_volume_m3"
+    scale: 1.0
+    offset: 0.0
+
+  # Mud weight (sg)
+  mud_density:
+    target_channel: "mud_weight_sg"
+    scale: 1.0
+    offset: 0.0
+
+  # Gas units
+  total_gas:
+    target_channel: "gas_units"
+    scale: 1.0
+    offset: 0.0
