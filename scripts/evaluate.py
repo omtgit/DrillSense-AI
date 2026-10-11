@@ -44,7 +44,9 @@ from sklearn.model_selection import GroupKFold
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from app.alarm_layer import apply_alarm_layer  # noqa: E402
 from app.features import add_context as _add_context, add_profile_features  # noqa: E402
+from app.rig_state import infer_rig_state  # noqa: E402
 from generators.drilling import generate_dataset  # noqa: E402
 from profiles import get_profile  # noqa: E402
 
@@ -71,12 +73,12 @@ RAW = [c for c in PROFILE.channels if c != "depth_m"]   # absolute depth only tr
 PHYS = [f.name for f in PROFILE.physics_features]
 CTX_BASE = RAW + PHYS
 
-# (kind, feature set); the first five are the headline table, all learned ones form the ablation.
+# (kind, feature set); the first headline table includes baselines, comparator, and learned models.
 SPECS = (
-    [("zscore", "raw"), ("rule", "physics"), ("iforest", "physics_only")]
+    [("zscore", "raw"), ("rule", "physics"), ("mahalanobis", "physics"), ("iforest", "physics_only")]
     + [(k, fs) for k in ("iforest", "xgb_bin", "xgb_multi") for fs in ("raw", "raw+physics", "raw+physics+context")]
 )
-HEADLINE = ["zscore|raw", "rule|physics", "iforest|physics_only",
+HEADLINE = ["zscore|raw", "rule|physics", "mahalanobis|physics", "iforest|physics_only",
             "xgb_bin|raw+physics+context", "xgb_multi|raw+physics+context"]
 
 
@@ -116,22 +118,55 @@ def _robust_scale(x):
 
 
 def score_zscore(ap, ref):
-    """max over raw channels of |x - median| / MAD, using each well's own reference rows (no labels)."""
+    """max over raw channels of |x - median| / MAD, using each well's own reference rows (no labels).
+    State-aware: during connections, channels expected to stop (flow, rotation, WOB) are suppressed
+    to prevent false alarms on pump connections."""
     med = ref.groupby("well_id")[RAW].median()
     mad = (ref[RAW] - med.reindex(ref["well_id"]).values).abs().groupby(ref["well_id"].values).median() * 1.4826
     m = med.reindex(ap["well_id"]).values
     s = np.maximum(mad.reindex(ap["well_id"]).values, 1e-3 * np.abs(m) + 1e-6)
-    return np.nanmax(np.abs((ap[RAW].values - m) / s), axis=1)
+    z = np.abs((ap[RAW].values - m) / s)
+
+    state = infer_rig_state(ap)
+    is_conn = (state == "connection").values
+    conn_drop = ["flow_in_lpm", "flow_out_lpm", "rpm", "wob_kn", "torque_knm", "rop_mph", "spp_bar"]
+    for c in conn_drop:
+        if c in RAW:
+            z[is_conn, RAW.index(c)] = 0.0
+    return np.nanmax(z, axis=1)
 
 
 def score_rule(ap, tr):
-    """Kick / loss rule: flow delta and pit rate (robust z from training rows) must have the same sign."""
+    """Kick / loss rule: flow delta and pit rate (robust z from training rows) must have the same sign.
+    State-aware: suppresses pump rampdown artifacts during connections."""
     mf, sf = _robust_scale(tr["flow_delta_lpm"].values)
     mp, sp = _robust_scale(tr["pit_rate_m3ph"].values)
     zf = (ap["flow_delta_lpm"].values - mf) / sf
     zp = (ap["pit_rate_m3ph"].values - mp) / sp
     s = np.where(np.sign(zf) == np.sign(zp), np.minimum(np.abs(zf), np.abs(zp)), 0.0)
+    state = infer_rig_state(ap)
+    is_conn = (state == "connection").values
+    s = np.where(is_conn, 0.0, s)
     return np.nan_to_num(s)
+
+
+def score_mahalanobis(ap, tr):
+    """Mahalanobis distance on cross-channel physics residuals from normal-state behaviour."""
+    cols = ["flow_delta_lpm", "pit_rate_m3ph", "mass_balance_residual", "flow_check_connection"]
+    avail_cols = [c for c in cols if c in tr.columns and c in ap.columns]
+    state_tr = infer_rig_state(tr)
+    # Fit covariance on normal drilling / circulating rows in training set
+    tr_norm = tr[state_tr != "connection"][avail_cols].dropna()
+    if len(tr_norm) < len(avail_cols) + 5:
+        tr_norm = tr[avail_cols].dropna()
+    mean = tr_norm.mean().values
+    cov = np.cov(tr_norm.values, rowvar=False)
+    inv_cov = np.linalg.pinv(cov + 1e-5 * np.eye(len(avail_cols)))
+
+    vals = ap[avail_cols].fillna(pd.Series(mean, index=avail_cols)).values
+    diff = vals - mean
+    dist = np.sqrt(np.maximum(0.0, np.sum(diff @ inv_cov * diff, axis=1)))
+    return np.nan_to_num(dist)
 
 
 def _xgb_fit(X, y, num_class, seed):
@@ -150,6 +185,8 @@ def score_spec(spec, cols_by_set, tr, ap, ref, seed):
         return score_zscore(ap, ref), None, None
     if kind == "rule":
         return score_rule(ap, tr), None, None
+    if kind == "mahalanobis":
+        return score_mahalanobis(ap, tr), None, None
     cols = cols_by_set[fs]
     if kind == "iforest":
         med = tr[cols].median()
@@ -166,7 +203,7 @@ def score_spec(spec, cols_by_set, tr, ap, ref, seed):
 
 def train_scores(spec, cols_by_set, tr, ref, seed):
     """Scores on the training rows used to set thresholds: out-of-fold for learned models."""
-    if spec[0] in ("zscore", "rule"):
+    if spec[0] in ("zscore", "rule", "mahalanobis"):
         return score_spec(spec, cols_by_set, tr, tr, ref, seed)[0]
     out = np.zeros(len(tr))
     for a, b in GroupKFold(min(INNER_FOLDS, tr["well_id"].nunique())).split(tr, groups=tr["well_id"]):
@@ -252,8 +289,16 @@ def run_protocol(df, events, mode, seed, specs, cols_by_set, shap_acc):
             s_te, proba, bst = score_spec(spec, cols_by_set, tr, te, ref_te, seed)
             r = res[name]
             r["score"][te_i] = s_te
+            # Apply alarm layer (persistence filter, hysteresis, cooldown) per well on test split
+            te_wells = te["well_id"].values
             for b in BUDGETS:
-                r["alarm"][b][te_i] = s_te >= thr[b]
+                raw_thr = thr[b]
+                filt_alarm = np.zeros(len(te), bool)
+                for w in np.unique(te_wells):
+                    w_pos = np.where(te_wells == w)[0]
+                    w_alarm, _ = apply_alarm_layer(s_te[w_pos], raw_thr)
+                    filt_alarm[w_pos] = w_alarm
+                r["alarm"][b][te_i] = filt_alarm
             if proba is not None:
                 r["proba"][te_i] = proba
             if mode == "wells" and bst is not None and spec[1] == "raw+physics+context":
@@ -422,7 +467,9 @@ def summarise_shap(acc, cols):
 
 # ---------------------------------------------------------------- docs tables
 
-LABELS = {"zscore|raw": "Per-well robust z-score (raw channels)", "rule|physics": "Physics rule (flow delta + pit rate)",
+LABELS = {"zscore|raw": "Per-well robust z-score (raw channels)",
+          "rule|physics": "Physics rule (flow delta + pit rate)",
+          "mahalanobis|physics": "Mahalanobis distance (normal residuals)",
           "iforest|physics_only": "Isolation Forest (physics features only)",
           "xgb_bin|raw+physics+context": "XGBoost binary", "xgb_multi|raw+physics+context": "XGBoost multiclass"}
 MODES = {"wells": "Well-held-out (5-fold CV grouped by well)", "time": "Time-held-out (first 70% train, last 30% test)"}
