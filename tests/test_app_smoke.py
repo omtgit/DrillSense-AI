@@ -5,7 +5,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 MAIN = str(Path(__file__).resolve().parent.parent / "app" / "main.py")
-PAGES = ["Executive Dashboard", "Well Explorer", "AI Decision Center",
+PAGES = ["Live Monitor", "Executive Dashboard", "Well Explorer", "AI Decision Center",
          "Model Evaluation", "CPU vs GPU Benchmark", "About"]
 
 
