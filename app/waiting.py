@@ -27,13 +27,13 @@ def _word_html(word):
     return f'{_STYLE}<div class="ds-wait">{word}...</div>'
 
 
-def run_with_status(fn, *args, fallback_text="Working...", interval=INTERVAL_SECONDS, words=STATUS_WORDS):
-    """Call fn(*args) once in a worker thread and return its result, animating a status word meanwhile."""
+def run_with_status(fn, *args, fallback_text="Working...", interval=INTERVAL_SECONDS, words=STATUS_WORDS, **kwargs):
+    """Call fn(*args, **kwargs) once in a worker thread and return its result, animating a status word meanwhile."""
     box = {}
 
     def worker():
         try:
-            box["value"] = fn(*args)
+            box["value"] = fn(*args, **kwargs)
         except BaseException as exc:  # handed back to the caller below, never printed
             box["error"] = exc
 
@@ -43,7 +43,7 @@ def run_with_status(fn, *args, fallback_text="Working...", interval=INTERVAL_SEC
         thread.start()
     except Exception:
         with st.spinner(fallback_text):
-            return fn(*args)  # nothing was started, so the call has not run yet
+            return fn(*args, **kwargs)  # nothing was started, so the call has not run yet
 
     shown = 0
     try:

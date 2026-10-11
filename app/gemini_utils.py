@@ -4,7 +4,15 @@ import time
 from dotenv import load_dotenv
 from google import genai
 
-
+from llm.gemini_provider import (
+    GeminiProvider,
+    error_code,
+    is_not_found,
+    parse_model_score,
+    rank_models,
+    sanitize_message,
+)
+from llm.openai_provider import OpenAIProvider
 
 # Not verified against a live key; override with GEMINI_MODEL or the sidebar field.
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
@@ -16,14 +24,17 @@ def model_name():
 
 def is_model_not_found(exc):
     """True if the exception looks like an API 404 / model-not-found error."""
-    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    text = f"{type(exc).__name__} {exc}".lower()
-    return code == 404 or "not_found" in text or "not found" in text or "404" in text
+    return is_not_found(exc)
 
 
-def has_key(api_key=None):
-    """True when a key is available, from the sidebar or from GEMINI_API_KEY."""
+def has_key(api_key=None, provider="Gemini"):
+    """True when a key or valid provider setup is available."""
     load_dotenv()
+    if provider == "Template only":
+        return False
+    if provider == "OpenAI-compatible":
+        # Can run against local servers without key
+        return True
     return bool(api_key or os.getenv("GEMINI_API_KEY"))
 
 
@@ -100,6 +111,7 @@ class Tagged(str):
     """
     detail = ""
     model = ""
+    provider = ""
 
 
 def _tag(text, **attrs):
@@ -125,19 +137,6 @@ def fallback_model():
     return os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
 
 
-def error_code(exc):
-    """HTTP status of an API error: from the exception, else from its text; None if unknown."""
-    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    if isinstance(code, int):
-        return code
-    text = f"{type(exc).__name__} {exc}"
-    for word, number in (("RESOURCE_EXHAUSTED", 429), ("UNAVAILABLE", 503), ("INTERNAL", 500)):
-        if word in text:
-            return number
-    m = re.search(r"\b(4\d\d|5\d\d)\b", text)
-    return int(m.group(1)) if m else None
-
-
 def _call_with_retries(client, model, prompt):
     """One model, up to len(BACKOFF_SECONDS) retries, and only for 429, 500 and 503."""
     for attempt in range(len(BACKOFF_SECONDS) + 1):
@@ -152,9 +151,7 @@ def _call_with_retries(client, model, prompt):
 def _friendly(exc, model, api_key):
     """(message for visitors, technical detail). The key never appears in either."""
     code = error_code(exc)
-    detail = f"{type(exc).__name__}: {exc}"
-    if api_key:
-        detail = detail.replace(api_key, "***")
+    detail = sanitize_message(f"{type(exc).__name__}: {exc}", api_key)
     if code == 404 or is_model_not_found(exc):
         msg = (f"Model '{model}' was not found by the Gemini API. Try another model name in the "
                f"sidebar; showing the template report.")
@@ -169,54 +166,70 @@ def _friendly(exc, model, api_key):
     return msg, detail
 
 
-def _guarded_call(prompt, source, fallback, api_key, model, extra_source=""):
-    """Run one Gemini call. Returns (text, error_or_None); `fallback` on any failure or ungrounded number.
+def _guarded_call(prompt, source, fallback, api_key, model, extra_source="",
+                  provider="Gemini", openai_base_url=None, openai_api_key=None,
+                  fallback_candidate=None):
+    """Run one generation call through the selected provider (Gemini or OpenAI-compatible).
 
-    429, 500 and 503 are retried with a short backoff, then GEMINI_FALLBACK_MODEL is tried once if set.
-    400, 401, 403 and 404 are never retried. Numbers are accepted if they appear in `source` or in
-    `extra_source` (the user's question). Error messages are friendly text; the technical text is on
-    `.detail`. The key is never logged or included in either.
+    Returns (text, error_or_None); `fallback` on any failure or ungrounded number.
+    Numbers are accepted if they appear in `source` or in `extra_source`.
+    The key is never logged or included in any message.
     """
     from report import numbers_are_grounded
 
-    used = (model or "").strip() or model_name()
-    try:
-        # Keep the Client in a local for the whole call: Client.__del__ closes its HTTP client, so
-        # get_client(...).models.generate_content(...) would close it before the request is sent.
-        client = get_client(api_key)
+    if provider == "OpenAI-compatible":
+        p = OpenAIProvider(base_url=openai_base_url, api_key=openai_api_key, model=model)
+        res = p.generate(prompt, model=model)
+        if res.error:
+            return fallback, _tag(res.error, detail=res.detail, provider=res.provider)
+        text = res.text or ""
+        used = res.model
+    else:
+        # Default Gemini flow
+        used = (model or "").strip() or model_name()
+        if used.lower() == "auto":
+            used = DEFAULT_MODEL
         try:
-            response = _call_with_retries(client, used, prompt)
+            client = get_client(api_key)
+            try:
+                response = _call_with_retries(client, used, prompt)
+            except Exception as exc:
+                alt = (fallback_candidate or "").strip() or fallback_model()
+                can_try_fallback = (
+                    (error_code(exc) in RETRY_CODES or is_model_not_found(exc))
+                    and alt
+                    and alt != used
+                )
+                if not can_try_fallback:
+                    raise
+                used = alt
+                response = client.models.generate_content(model=used, contents=prompt)
+            text = response.text or ""
         except Exception as exc:
-            alt = fallback_model()
-            if error_code(exc) not in RETRY_CODES or not alt or alt == used:
-                raise
-            used = alt
-            response = client.models.generate_content(model=used, contents=prompt)
-        text = response.text or ""
-    except Exception as exc:
-        msg, detail = _friendly(exc, used, api_key)
-        return fallback, _tag(msg, detail=detail)
+            msg, detail = _friendly(exc, used, api_key)
+            return fallback, _tag(msg, detail=detail, provider="Gemini")
+
     if not text.strip():
-        return fallback, _tag("Gemini returned no text; showing the template report.")
+        return fallback, _tag(f"{provider} returned no text; showing the template report.", provider=provider)
     if not numbers_are_grounded(text, f"{source}\n{extra_source}"):
-        return fallback, _tag("Gemini introduced numbers not in the facts; showing the template report.")
-    return _tag(text, model=used), None
+        return fallback, _tag(f"{provider} introduced numbers not in the facts; showing the template report.", provider=provider)
+    return _tag(text, model=used, provider=provider), None
 
 
-def rephrase_report(template_report, api_key=None, model=None):
-    """Ask Gemini to rephrase the template report. Returns (text, error_or_None)."""
+def rephrase_report(template_report, api_key=None, model=None, **kwargs):
+    """Ask provider to rephrase the template report. Returns (text, error_or_None)."""
     return _guarded_call(PROMPT.format(report=template_report), template_report, template_report,
-                         api_key, model)
+                         api_key, model, **kwargs)
 
 
-def write_for(template_report, audience, language, api_key=None, model=None):
+def write_for(template_report, audience, language, api_key=None, model=None, **kwargs):
     """The same facts written for a specific reader. Falls back to the template report."""
     prompt = WRITE_PROMPT.format(audience=AUDIENCES[audience], language=language, rules=RULES,
                                  report=template_report)
-    return _guarded_call(prompt, template_report, template_report, api_key, model)
+    return _guarded_call(prompt, template_report, template_report, api_key, model, **kwargs)
 
 
-def answer_question(template_report, question, language="English", api_key=None, model=None):
+def answer_question(template_report, question, language="English", api_key=None, model=None, **kwargs):
     """Answer a question from the report only. Returns (answer, error_or_None).
 
     On any failure the answer is None and the caller shows the error instead.
@@ -224,10 +237,10 @@ def answer_question(template_report, question, language="English", api_key=None,
     refusal = REFUSALS.get(language, NOT_IN_DATA)
     prompt = ASK_PROMPT.format(language=language, rules=RULES, refusal=refusal,
                                report=template_report, question=question.strip())
-    text, err = _guarded_call(prompt, template_report, None, api_key, model, extra_source=question)
+    text, err = _guarded_call(prompt, template_report, None, api_key, model, extra_source=question, **kwargs)
     if err:
         return None, _tag(err.replace("showing the template report", "no answer was generated"),
-                          detail=err.detail)
+                          detail=err.detail, provider=getattr(err, "provider", "Gemini"))
     if text.strip().rstrip(".。") in {r.rstrip(".。") for r in REFUSALS.values()}:
-        return _tag(refusal, model=text.model), None
+        return _tag(refusal, model=text.model, provider=getattr(text, "provider", "Gemini")), None
     return text, None

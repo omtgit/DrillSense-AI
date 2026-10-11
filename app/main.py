@@ -1,4 +1,5 @@
 import json
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -106,15 +107,108 @@ else:
 
 with st.sidebar.expander("AI assistant (optional)"):
     st.caption(
-        "The full report works without a key. Add your own free Google AI Studio key to get the same facts "
+        "The full report works without a key. Add your own API key to get the same facts "
         "written for a specific reader, in English or Hindi, and to ask questions about this event. "
         "Detection is done by the model; the assistant only helps you communicate it. It cannot invent "
         "numbers: everything is checked against the report. Your key stays in this browser session and is "
         "never stored or logged."
     )
-    st.markdown("[Get a free key from Google AI Studio](https://aistudio.google.com/apikey)")
-    st.text_input("Google AI Studio key", type="password", key="gemini_api_key")
-    st.text_input("Model name (advanced)", value=model_name(), key="gemini_model")
+
+    provider_options = ["Gemini (default)", "OpenAI-compatible", "Template only (no AI)"]
+    default_provider_idx = 0
+    env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if env_provider in ("openai", "openai-compatible"):
+        default_provider_idx = 1
+    elif env_provider in ("none", "template", "template only"):
+        default_provider_idx = 2
+
+    chosen_provider_raw = st.selectbox(
+        "AI Provider",
+        provider_options,
+        index=default_provider_idx,
+        key="llm_provider_choice",
+        help="Select which LLM provider to use for optional assistant writing and Q&A.",
+    )
+    # Normalized provider name stored in session_state
+    if "Gemini" in chosen_provider_raw:
+        provider_type = "Gemini"
+    elif "OpenAI" in chosen_provider_raw:
+        provider_type = "OpenAI-compatible"
+    else:
+        provider_type = "Template only"
+    st.session_state["llm_provider"] = provider_type
+
+    if provider_type == "Gemini":
+        st.markdown("[Get a free key from Google AI Studio](https://aistudio.google.com/apikey)")
+        gem_key = st.text_input("Google AI Studio key", type="password", key="gemini_api_key")
+        
+        # Discover models dynamically if key is available
+        discovered_models = []
+        effective_key = gem_key or os.getenv("GEMINI_API_KEY", "")
+        if effective_key:
+            cache_key = f"gemini_models_{effective_key[:8]}"
+            if cache_key in st.session_state:
+                discovered_models = st.session_state[cache_key]
+            else:
+                try:
+                    from llm.gemini_provider import GeminiProvider
+                    gp = GeminiProvider(api_key=effective_key)
+                    m_list = gp.list_models()
+                    discovered_models = [m.id for m in m_list]
+                    st.session_state[cache_key] = discovered_models
+                except Exception:
+                    discovered_models = []
+
+        model_dropdown_options = ["Auto (recommended)"]
+        if discovered_models:
+            model_dropdown_options.extend(discovered_models)
+        model_dropdown_options.append("Advanced: type a model name")
+
+        # Check default value from GEMINI_MODEL env var if present
+        env_model_override = os.getenv("GEMINI_MODEL", "").strip()
+        default_idx = 0
+        if env_model_override and env_model_override != "auto" and env_model_override in model_dropdown_options:
+            default_idx = model_dropdown_options.index(env_model_override)
+
+        selected_model_option = st.selectbox(
+            "Model",
+            model_dropdown_options,
+            index=default_idx,
+            key="gemini_model_select",
+            help="Choose 'Auto (recommended)' to automatically use the best available model for your key.",
+        )
+
+        if selected_model_option == "Advanced: type a model name":
+            custom_model = st.text_input("Custom model name", value=env_model_override or "gemini-2.5-flash", key="gemini_custom_model")
+            st.session_state["effective_model"] = custom_model.strip()
+        elif selected_model_option == "Auto (recommended)":
+            if discovered_models:
+                from llm.gemini_provider import rank_models
+                st.session_state["effective_model"] = rank_models(discovered_models)[0]
+                if len(discovered_models) > 1:
+                    st.session_state["fallback_model_candidate"] = rank_models(discovered_models)[1]
+            else:
+                st.session_state["effective_model"] = "auto"
+        else:
+            st.session_state["effective_model"] = selected_model_option
+            # If a specific discovered model is picked, set fallback candidate to the recommended default if different
+            if discovered_models and discovered_models[0] != selected_model_option:
+                st.session_state["fallback_model_candidate"] = discovered_models[0]
+
+        # Sync back to gemini_model for backwards compatibility
+        st.session_state["gemini_model"] = st.session_state.get("effective_model", "auto")
+
+    elif provider_type == "OpenAI-compatible":
+        st.info("Compatible with local servers (Ollama, vLLM, LM Studio) or third-party endpoints. Not verified against any live service.")
+        st.caption("Plain http:// is only allowed for localhost. Remote hosts must use https://.")
+        oa_base = st.text_input("Base URL", value=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1"), key="openai_base_url")
+        oa_key = st.text_input("API key (optional for local)", type="password", key="openai_api_key")
+        oa_model = st.text_input("Model name", value=os.getenv("OPENAI_MODEL", "llama3"), key="openai_model")
+        st.session_state["effective_model"] = oa_model.strip()
+        if oa_base and not ("localhost" in oa_base or "127.0.0.1" in oa_base):
+            st.warning("Warning: Your API key will be sent to the remote URL you specified above.")
+    else:
+        st.info("Template only: incident summaries and instant answers are generated deterministically in code.")
 
 # ===================================================
 # Data for the three profile-aware pages

@@ -17,6 +17,12 @@ def gemini_label(model):
     return f"Gemini answer ({model}), checked against the incident facts"
 
 
+def provider_label(model, provider="Gemini"):
+    if provider == "OpenAI-compatible":
+        return f"OpenAI-compatible answer ({model}), checked against the incident facts"
+    return gemini_label(model)
+
+
 def instant_answer(key, finding):
     d = derive_facts(finding)
     if d is None:
