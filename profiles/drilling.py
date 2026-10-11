@@ -91,12 +91,27 @@ def _mse(g):
     return (e_kpa / 1000.0).where((rop_mpm > 0.05) & (g["rpm"] > 5))
 
 
+def _mass_balance_res(g):
+    """Discrepancy between pit volume change and integrated flow difference."""
+    flow_delta_m3 = (g["flow_out_lpm"] - g["flow_in_lpm"]) / 1000.0
+    pit_diff_m3 = g["pit_volume_m3"].diff().fillna(0)
+    return (pit_diff_m3 - flow_delta_m3).rolling(5, min_periods=1).mean()
+
+
+def _flow_check_conn(g):
+    """Flow check returns while pumps are off/unloaded during connection."""
+    is_conn = (g["rpm"] < 15.0) & (g["wob_kn"] < 15.0) & (g["flow_in_lpm"] < 1500.0)
+    return (g["flow_out_lpm"] * is_conn).rolling(5, min_periods=1).mean()
+
+
 FEATURES = (
     PhysicsFeature("flow_delta_lpm", "flow_out - flow_in, 5-min trailing mean (kick / loss indicator)", _flow_delta),
     PhysicsFeature("pit_rate_m3ph", "pit volume change over the last 10 min, per hour", _pit_rate),
     PhysicsFeature("depth_progress_mph", "depth change over the last 10 min, per hour (stalls when stuck)", _depth_progress),
     PhysicsFeature("spp_norm", "standpipe pressure / (flow_in/2000)^1.8; falls with a washout, rises with a pack-off", _spp_norm),
     PhysicsFeature("mse_mpa", "Teale mechanical specific energy (MPa), on-bottom only", _mse),
+    PhysicsFeature("mass_balance_residual", "mass balance: pit volume rate vs integrated flow difference", _mass_balance_res),
+    PhysicsFeature("flow_check_connection", "flow check: flow out returns during connection", _flow_check_conn),
 )
 
 PROFILE = Profile(

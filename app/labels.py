@@ -15,6 +15,8 @@ PHYSICS_NAMES = {
     "depth_progress_mph": "Drilling progress",
     "spp_norm": "Standpipe pressure (corrected for flow)",
     "mse_mpa": "Mechanical specific energy",
+    "mass_balance_residual": "Mass balance flow vs pit residual",
+    "flow_check_connection": "Flow check returns during connection",
 }
 
 
