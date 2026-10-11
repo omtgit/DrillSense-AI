@@ -126,5 +126,8 @@ class OpenAIProvider(BaseProvider):
                 return GenerationResult(text=text, model=used_model, provider=self.name)
         except Exception as exc:
             err_str = sanitize_message(f"{type(exc).__name__}: {exc}", self.api_key)
-            msg = f"Failed to connect to {self.base_url}. Showing template report."
+            if "refused" in err_str.lower() or "connecterror" in err_str.lower():
+                msg = f"Failed to connect to {self.base_url}. If using Ollama, make sure Ollama is running ('ollama run {used_model}' in terminal). Showing template report."
+            else:
+                msg = f"Failed to connect to {self.base_url}. Showing template report."
             return GenerationResult(text="", model=used_model, provider=self.name, error=msg, detail=err_str)

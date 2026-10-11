@@ -199,8 +199,21 @@ with st.sidebar.expander("AI assistant (optional)"):
         st.session_state["gemini_model"] = st.session_state.get("effective_model", "auto")
 
     elif provider_type == "OpenAI-compatible":
-        st.info("Compatible with local servers (Ollama, vLLM, LM Studio) or third-party endpoints. Not verified against any live service.")
-        st.caption("Plain http:// is only allowed for localhost. Remote hosts must use https://.")
+        st.info("Connect to local servers (Ollama, LM Studio, vLLM) or remote OpenAI-compatible endpoints.")
+        with st.expander("How to run a local model with Ollama"):
+            st.markdown(
+                """
+                1. Install Ollama from [ollama.com](https://ollama.com).
+                2. Open a terminal and run your model:
+                   ```bash
+                   ollama run llama3
+                   ```
+                   *(or `ollama run mistral`, `ollama run qwen2.5`)*
+                3. Keep the terminal running so `http://localhost:11434/v1` is active.
+                4. Set the Model name below to match what you ran (e.g. `llama3`).
+                """
+            )
+        st.caption("Security rule: Plain http:// is only allowed for localhost. Remote hosts must use https://.")
         oa_base = st.text_input("Base URL", value=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1"), key="openai_base_url")
         oa_key = st.text_input("API key (optional for local)", type="password", key="openai_api_key")
         oa_model = st.text_input("Model name", value=os.getenv("OPENAI_MODEL", "llama3"), key="openai_model")
