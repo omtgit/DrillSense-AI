@@ -252,3 +252,47 @@ def render_decision_center(scored, det):
             st.markdown(f'<div style="text-align:right;">{severity_chip_html(row["predicted_severity"])}</div>', unsafe_allow_html=True)
 
     report_section(scored, row, profile, rules_from_profile=True)
+
+    st.divider()
+    with st.expander("💰 Detection Lead Time Impact Estimator (Illustrative)", expanded=False):
+        st.markdown(
+            "Estimate potential rig non-productive time (NPT) cost savings from early anomaly detection. "
+            "**Note:** This calculation is plain illustrative arithmetic and does not represent an actual guaranteed cost saving."
+        )
+        col_rate, col_lead = st.columns(2)
+        with col_rate:
+            rate_input = st.text_input(
+                "Rig Day Rate ($ / day)",
+                value="",
+                placeholder="e.g. 250000",
+                help="Type your custom rig day rate in USD. No default value is preset.",
+            )
+        with col_lead:
+            lead_time_hrs = st.number_input(
+                "Detection Lead Time / Avoided NPT (Hours)",
+                min_value=0.1,
+                max_value=120.0,
+                value=2.0,
+                step=0.5,
+                help="Estimated hours of drilling downtime, fishing operation, or troubleshooting avoided by early detection.",
+            )
+
+        if rate_input.strip():
+            try:
+                cleaned_val = float(rate_input.replace(",", "").replace("$", "").strip())
+                if cleaned_val > 0:
+                    hourly_cost = cleaned_val / 24.0
+                    savings = hourly_cost * float(lead_time_hrs)
+                    c_h, c_s = st.columns(2)
+                    c_h.metric("Hourly Rig Spread Cost", f"${hourly_cost:,.2f} / hr")
+                    c_s.metric("Illustrative Lead-Time Cost Avoidance", f"${savings:,.2f}")
+                    st.caption(
+                        f"Formula: (Day Rate ${cleaned_val:,.2f} ÷ 24) × {lead_time_hrs:.1f} hours avoided = "
+                        f"${savings:,.2f}. Illustrative calculation only."
+                    )
+                else:
+                    st.warning("Please enter a positive rig day rate.")
+            except ValueError:
+                st.warning("Please enter a valid numeric rig day rate (e.g. 250000).")
+        else:
+            st.info("Enter a rig day rate above to calculate illustrative cost avoidance.")
