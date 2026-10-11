@@ -21,9 +21,17 @@ from pathlib import Path
 import numpy as np
 import xgboost as xgb
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+APP_DIR = Path(__file__).resolve().parent
+ROOT_DIR = APP_DIR.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
-from features import add_context, add_profile_features  # noqa: E402
+try:
+    from app.features import add_context, add_profile_features  # noqa: E402
+except ImportError:
+    from features import add_context, add_profile_features  # noqa: E402
 from generators.drilling import generate_dataset  # noqa: E402
 
 TRAIN_SEED = 1001

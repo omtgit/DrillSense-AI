@@ -92,6 +92,7 @@ page = st.sidebar.radio(
     "Select Page",
     [
         "Executive Dashboard",
+        "Live Monitor",
         "Well Explorer",
         "AI Decision Center",
         "Model Evaluation",
@@ -214,22 +215,37 @@ with st.sidebar.expander("AI assistant (optional)"):
 # Data for the three profile-aware pages
 # ===================================================
 
-PROFILE_PAGES = ("Executive Dashboard", "Well Explorer", "AI Decision Center")
+PROFILE_PAGES = ("Live Monitor", "Executive Dashboard", "Well Explorer", "AI Decision Center")
 
 if page in PROFILE_PAGES and profile_name == "drilling":
     try:
         ensure_ready()
-        scored = load_drilling_scored()
         det = get_detector()
     except Exception as exc:
-        show_error("the demo wells could not be loaded or scored", exc)
+        show_error("the demo models could not be loaded", exc)
         st.stop()
-    if page == "Executive Dashboard":
-        drilling_pages.render_dashboard(scored, det)
-    elif page == "Well Explorer":
-        drilling_pages.render_explorer(scored, det.profile)
+
+    if page == "Live Monitor":
+        import live_monitor_page
+        live_monitor_page.render_live_monitor(det)
     else:
-        drilling_pages.render_decision_center(scored, det)
+        try:
+            scored = load_drilling_scored()
+        except Exception as exc:
+            show_error("the demo wells could not be loaded or scored", exc)
+            st.stop()
+        if page == "Executive Dashboard":
+            drilling_pages.render_dashboard(scored, det)
+        elif page == "Well Explorer":
+            drilling_pages.render_explorer(scored, det.profile)
+        else:
+            drilling_pages.render_decision_center(scored, det)
+    footer()
+    st.stop()
+
+if page == "Live Monitor" and profile_name == "production":
+    st.info("Live streaming and replay are designed for the high-frequency drilling telemetry profile. "
+            "Switch to the 'Drilling' domain profile in the sidebar to view Live Monitor.")
     footer()
     st.stop()
 

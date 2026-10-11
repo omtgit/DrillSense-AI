@@ -13,6 +13,7 @@ models/
 
 data/raw/
 data/processed/
+data/runtime/
 
 .ipynb_checkpoints/
 
