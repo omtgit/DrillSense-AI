@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<witsml:logs xmlns:witsml="http://www.witsml.org/schemas/1series" version="1.4.1.1">
+  <witsml:log uidWell="NO-15-9-F-1B" uidWellbore="NO-15-9-F-1B" uid="log_time_sample">
+    <witsml:nameWell>NO 15/9-F-1 B</witsml:nameWell>
+    <witsml:nameWellbore>NO 15/9-F-1 B</witsml:nameWellbore>
+    <witsml:name>Real-time drilling telemetry</witsml:name>
+    <witsml:serviceCompany>Schlumberger</witsml:serviceCompany>
+    <witsml:indexType>date time</witsml:indexType>
+    <witsml:stepIncrement>60.0</witsml:stepIncrement>
+    <witsml:nullValue>-999.25</witsml:nullValue>
+    <witsml:logCurveInfo uid="1">
+      <witsml:mnemonic>TIME</witsml:mnemonic>
+      <witsml:unit>s</witsml:unit>
+      <witsml:typeLogData>date time</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="2">
+      <witsml:mnemonic>DMEA</witsml:mnemonic>
+      <witsml:unit>m</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="3">
+      <witsml:mnemonic>SWOB</witsml:mnemonic>
+      <witsml:unit>kN</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="4">
+      <witsml:mnemonic>SRPM</witsml:mnemonic>
+      <witsml:unit>rpm</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="5">
+      <witsml:mnemonic>STOR</witsml:mnemonic>
+      <witsml:unit>kN.m</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="6">
+      <witsml:mnemonic>ROPA</witsml:mnemonic>
+      <witsml:unit>m/h</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="7">
+      <witsml:mnemonic>SPPA</witsml:mnemonic>
+      <witsml:unit>bar</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="8">
+      <witsml:mnemonic>MFIA</witsml:mnemonic>
+      <witsml:unit>L/min</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="9">
+      <witsml:mnemonic>MFOA</witsml:mnemonic>
+      <witsml:unit>L/min</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="10">
+      <witsml:mnemonic>VOLACT</witsml:mnemonic>
+      <witsml:unit>m3</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="11">
+      <witsml:mnemonic>MWIN</witsml:mnemonic>
+      <witsml:unit>sg</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="12">
+      <witsml:mnemonic>GSA</witsml:mnemonic>
+      <witsml:unit>ppm</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logData>
+      <witsml:data>2008-05-10T12:00:00Z, 2850.5, 95.0, 120.0, 14.5, 18.2, 195.0, 2450.0, 2460.0, 85.2, 1.45, 15.0</witsml:data>
+      <witsml:data>2008-05-10T12:01:00Z, 2850.8, 98.0, 122.0, 14.8, 18.5, 196.2, 2455.0, 2458.0, 85.2, 1.45, 15.2</witsml:data>
+      <witsml:data>2008-05-10T12:02:00Z, 2851.1, 102.0, 120.0, 15.0, 18.0, 195.8, 2450.0, 2452.0, 85.3, 1.45, 16.0</witsml:data>
+      <witsml:data>2008-05-10T12:03:00Z, 2851.4, 0.0, 0.0, 0.0, 0.0, 15.0, 0.0, 50.0, 85.3, 1.45, 14.0</witsml:data>
+      <witsml:data>2008-05-10T12:04:00Z, 2851.4, -999.25, 0.0, 0.0, 0.0, 12.0, 0.0, 45.0, 85.3, 1.45, 12.0</witsml:data>
+      <witsml:data>2008-05-10T12:05:00Z, 2851.7, 92.0, 118.0, 14.2, 17.5, 194.0, 2440.0, 2445.0, 85.3, 1.45, 15.5</witsml:data>
+    </witsml:logData>
+  </witsml:log>
+</witsml:logs>

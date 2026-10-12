@@ -1,0 +1,189 @@
+# Standard channel mappings for Volve WITSML log curves
+# Maps raw WITSML curve mnemonics to DrillSense AI drilling profile channels
+# Each entry defines:
+#   target_channel: profile channel name
+#   scale: multiplicative factor applied to raw values
+#   offset: additive offset applied after scale
+#   description: mnemonic description
+
+channels:
+  # Depth curves
+  DEPT:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+    description: "Bit Depth (meters)"
+  DMEA:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+    description: "Measured Depth (meters)"
+  DEPTH:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+    description: "Bit Depth (meters)"
+
+  # Weight on bit
+  WOB:
+    target_channel: "wob_kn"
+    scale: 1.0
+    offset: 0.0
+    description: "Weight on bit (kN)"
+  SWOB:
+    target_channel: "wob_kn"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface weight on bit (kN)"
+  WOBX:
+    target_channel: "wob_kn"
+    scale: 4.44822
+    offset: 0.0
+    description: "Weight on bit in kips -> convert to kN"
+
+  # Rotary speed
+  RPM:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface RPM"
+  SRPM:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface RPM"
+  TRPM:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Total RPM"
+
+  # Torque
+  TORQ:
+    target_channel: "torque_knm"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface torque (kNm)"
+  STOR:
+    target_channel: "torque_knm"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface torque (kNm)"
+  TORQ_FTLBF:
+    target_channel: "torque_knm"
+    scale: 0.001355818
+    offset: 0.0
+    description: "Surface torque in ft-lbf -> convert to kNm"
+
+  # Rate of penetration
+  ROP:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+    description: "Rate of penetration (m/h)"
+  ROPA:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+    description: "Average rate of penetration (m/h)"
+  ROPI:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+    description: "Instantaneous rate of penetration (m/h)"
+
+  # Standpipe pressure
+  SPP:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+    description: "Standpipe pressure (bar)"
+  SPPA:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+    description: "Standpipe pressure (bar)"
+  SPP_PSI:
+    target_channel: "spp_bar"
+    scale: 0.0689476
+    offset: 0.0
+    description: "Standpipe pressure in psi -> convert to bar"
+
+  # Flow rates
+  FLOWIN:
+    target_channel: "flow_in_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Flow rate in (L/min)"
+  MFIA:
+    target_channel: "flow_in_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud flow in actual (L/min)"
+  FLOWIN_GPM:
+    target_channel: "flow_in_lpm"
+    scale: 3.78541
+    offset: 0.0
+    description: "Flow rate in gpm -> convert to L/min"
+
+  FLOWOUT:
+    target_channel: "flow_out_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Return flow rate out (L/min)"
+  MFOA:
+    target_channel: "flow_out_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud flow out actual (L/min)"
+  FLOWOUT_PCT:
+    target_channel: "flow_out_lpm"
+    scale: 30.0
+    offset: 0.0
+    description: "Flow out paddle percentage -> estimated scale to L/min"
+
+  # Mud pit volume
+  PVT:
+    target_channel: "pit_volume_m3"
+    scale: 1.0
+    offset: 0.0
+    description: "Total pit volume (m3)"
+  VOLACT:
+    target_channel: "pit_volume_m3"
+    scale: 1.0
+    offset: 0.0
+    description: "Active pit volume (m3)"
+  BBL_PITS:
+    target_channel: "pit_volume_m3"
+    scale: 0.158987
+    offset: 0.0
+    description: "Pit volume in bbl -> convert to m3"
+
+  # Mud weight / density
+  MWIN:
+    target_channel: "mud_weight_sg"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud density in (sg / g/cm3)"
+  MWOUT:
+    target_channel: "mud_weight_sg"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud density out (sg / g/cm3)"
+  MW_PPG:
+    target_channel: "mud_weight_sg"
+    scale: 0.119826
+    offset: 0.0
+    description: "Mud weight in ppg -> convert to sg"
+
+  # Total gas
+  GAS:
+    target_channel: "gas_units"
+    scale: 1.0
+    offset: 0.0
+    description: "Total gas units"
+  GSA:
+    target_channel: "gas_units"
+    scale: 1.0
+    offset: 0.0
+    description: "Gas units actual"
