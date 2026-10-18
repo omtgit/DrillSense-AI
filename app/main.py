@@ -93,6 +93,7 @@ page = st.sidebar.radio(
     [
         "Executive Dashboard",
         "Live Monitor",
+        "Bring Your Own Data",
         "Well Explorer",
         "AI Decision Center",
         "Model Evaluation",
@@ -215,7 +216,7 @@ with st.sidebar.expander("AI assistant (optional)"):
 # Data for the three profile-aware pages
 # ===================================================
 
-PROFILE_PAGES = ("Live Monitor", "Executive Dashboard", "Well Explorer", "AI Decision Center")
+PROFILE_PAGES = ("Live Monitor", "Bring Your Own Data", "Executive Dashboard", "Well Explorer", "AI Decision Center")
 
 if page in PROFILE_PAGES and profile_name == "drilling":
     try:
@@ -228,6 +229,9 @@ if page in PROFILE_PAGES and profile_name == "drilling":
     if page == "Live Monitor":
         import live_monitor_page
         live_monitor_page.render_live_monitor(det)
+    elif page == "Bring Your Own Data":
+        import byod_page
+        byod_page.render_byod_page(det)
     else:
         try:
             scored = load_drilling_scored()
@@ -243,9 +247,9 @@ if page in PROFILE_PAGES and profile_name == "drilling":
     footer()
     st.stop()
 
-if page == "Live Monitor" and profile_name == "production":
-    st.info("Live streaming and replay are designed for the high-frequency drilling telemetry profile. "
-            "Switch to the 'Drilling' domain profile in the sidebar to view Live Monitor.")
+if page in ("Live Monitor", "Bring Your Own Data") and profile_name == "production":
+    st.info("Live streaming and BYOD telemetry analysis are designed for the high-frequency drilling telemetry profile. "
+            "Switch to the 'Drilling' domain profile in the sidebar to use this page.")
     footer()
     st.stop()
 
@@ -677,6 +681,12 @@ It is an educational project, not a tool for operational decisions.
 - Isolation Forest
 - RAPIDS cuDF (offline CSV-read benchmark only)
 - Plotly
+
+### Data Sources & Attributions
+
+- **Equinor Volve Field Dataset**: Drilling telemetry (WITSML XML logs) and Daily Drilling Reports (DDR XML) are derived from the Volve data sharing initiative by Equinor ASA and former licence partners (ExxonMobil, Bayerngas). The dataset is made available under Equinor's modified CC BY license (strictly for non-commercial and commercial research; resale of raw data prohibited). More info: [Equinor Volve Data Sharing](https://www.equinor.com/energy/volve-data-sharing).
+- **DataDRILL Research Dataset**: Kick detection and formation pressure scenarios are based on the open research dataset by Arifeen et al. (2024), *"DataDRILL: Formation Pressure Prediction and Kick Detection for Drilling Rigs"*, hosted on Zenodo.
+- **Built-in Drilling Simulator**: Synthetic baseline drilling telemetry generated via deterministic physical modeling in `generators/drilling.py`.
 
 ### Workflow
 

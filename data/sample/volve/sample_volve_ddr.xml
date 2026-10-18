@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<witsml:opsReports xmlns:witsml="http://www.witsml.org/schemas/1series" version="1.4.1.1">
+  <witsml:opsReport uidWell="NO-15-9-F-1B" uidWellbore="NO-15-9-F-1B" uid="ddr_20080510">
+    <witsml:nameWell>NO 15/9-F-1 B</witsml:nameWell>
+    <witsml:nameWellbore>NO 15/9-F-1 B</witsml:nameWellbore>
+    <witsml:dateReport>2008-05-10</witsml:dateReport>
+    <witsml:activity>
+      <witsml:activityCode>Drilling</witsml:activityCode>
+      <witsml:phase>12.25 in Hole Section</witsml:phase>
+      <witsml:mdStart>2850.0</witsml:mdStart>
+      <witsml:mdEnd>2895.0</witsml:mdEnd>
+      <witsml:comments>Drilling ahead with PDC bit. Good penetration rate. Parameter check.</witsml:comments>
+    </witsml:activity>
+    <witsml:activity>
+      <witsml:activityCode>Connection</witsml:activityCode>
+      <witsml:phase>Pipe Addition</witsml:phase>
+      <witsml:mdStart>2895.0</witsml:mdStart>
+      <witsml:mdEnd>2895.0</witsml:mdEnd>
+      <witsml:comments>Flow check performed. Well static. Made connection stand #94.</witsml:comments>
+    </witsml:activity>
+    <witsml:activity>
+      <witsml:activityCode>Circulation</witsml:activityCode>
+      <witsml:phase>Hole Cleaning</witsml:phase>
+      <witsml:mdStart>2895.0</witsml:mdStart>
+      <witsml:mdEnd>2895.0</witsml:mdEnd>
+      <witsml:comments>Circulated bottoms up. Mud weight in 1.45 sg, mud weight out 1.45 sg.</witsml:comments>
+    </witsml:activity>
+  </witsml:opsReport>
+</witsml:opsReports>

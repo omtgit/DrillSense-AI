@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<witsml:logs xmlns:witsml="http://www.witsml.org/schemas/1series" version="1.4.1.1">
+  <witsml:log uidWell="NO-15-9-F-1B" uidWellbore="NO-15-9-F-1B" uid="log_depth_sample">
+    <witsml:nameWell>NO 15/9-F-1 B</witsml:nameWell>
+    <witsml:nameWellbore>NO 15/9-F-1 B</witsml:nameWellbore>
+    <witsml:name>Wireline Log Depth</witsml:name>
+    <witsml:indexType>measured depth</witsml:indexType>
+    <witsml:nullValue>-999.25</witsml:nullValue>
+    <witsml:logCurveInfo uid="1">
+      <witsml:mnemonic>DEPT</witsml:mnemonic>
+      <witsml:unit>m</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="2">
+      <witsml:mnemonic>SWOB</witsml:mnemonic>
+      <witsml:unit>kN</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logCurveInfo uid="3">
+      <witsml:mnemonic>SPPA</witsml:mnemonic>
+      <witsml:unit>bar</witsml:unit>
+      <witsml:typeLogData>double</witsml:typeLogData>
+    </witsml:logCurveInfo>
+    <witsml:logData>
+      <witsml:data>2850.0, 90.0, 190.0</witsml:data>
+      <witsml:data>2850.5, 92.0, 191.0</witsml:data>
+      <witsml:data>2851.0, 95.0, 192.5</witsml:data>
+    </witsml:logData>
+  </witsml:log>
+</witsml:logs>

@@ -1,0 +1,137 @@
+# DataDrill CSV column mapping configuration for DrillSense AI
+# DataDRILL research dataset format (Arifeen et al.) -> DrillSense drilling profile channels
+
+well_id_column: "Well"
+timestamp_column: "Timestamp"
+
+channels:
+  # Measured depth / bit depth
+  Depth:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+    description: "Well depth (meters)"
+  Bit_Depth:
+    target_channel: "depth_m"
+    scale: 1.0
+    offset: 0.0
+    description: "Bit depth (meters)"
+
+  # Weight on bit
+  WOB:
+    target_channel: "wob_kn"
+    scale: 1.0
+    offset: 0.0
+    description: "Weight on bit (kN)"
+  Weight_on_Bit:
+    target_channel: "wob_kn"
+    scale: 1.0
+    offset: 0.0
+    description: "Weight on bit (kN)"
+
+  # Rotary speed
+  RPM:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Rotary speed (rpm)"
+  Rotary_Speed:
+    target_channel: "rpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Rotary speed (rpm)"
+
+  # Torque
+  Torque:
+    target_channel: "torque_knm"
+    scale: 1.0
+    offset: 0.0
+    description: "Surface torque (kNm)"
+
+  # Rate of penetration
+  ROP:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+    description: "Rate of penetration (m/h)"
+  Rate_of_Penetration:
+    target_channel: "rop_mph"
+    scale: 1.0
+    offset: 0.0
+    description: "Rate of penetration (m/h)"
+
+  # Standpipe pressure / pump pressure
+  SPP:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+    description: "Standpipe pressure (bar)"
+  Standpipe_Pressure:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+    description: "Standpipe pressure (bar)"
+  Pump_Pressure:
+    target_channel: "spp_bar"
+    scale: 1.0
+    offset: 0.0
+    description: "Pump pressure (bar)"
+
+  # Flow rates
+  Flow_In:
+    target_channel: "flow_in_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud pump flow rate in (L/min)"
+  Pump_Flow_Rate:
+    target_channel: "flow_in_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Pump flow in (L/min)"
+
+  Flow_Out:
+    target_channel: "flow_out_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud flow out (L/min)"
+  Return_Flow_Rate:
+    target_channel: "flow_out_lpm"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud return flow rate (L/min)"
+
+  # Mud pit volume
+  Pit_Volume:
+    target_channel: "pit_volume_m3"
+    scale: 1.0
+    offset: 0.0
+    description: "Pit volume (m3)"
+  Total_Pit_Volume:
+    target_channel: "pit_volume_m3"
+    scale: 1.0
+    offset: 0.0
+    description: "Total active pit volume (m3)"
+
+  # Mud weight
+  Mud_Weight:
+    target_channel: "mud_weight_sg"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud weight (sg)"
+  Mud_Density:
+    target_channel: "mud_weight_sg"
+    scale: 1.0
+    offset: 0.0
+    description: "Mud density (sg)"
+
+  # Gas units
+  Total_Gas:
+    target_channel: "gas_units"
+    scale: 1.0
+    offset: 0.0
+    description: "Total gas units"
+  Gas:
+    target_channel: "gas_units"
+    scale: 1.0
+    offset: 0.0
+    description: "Gas units"

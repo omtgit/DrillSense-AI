@@ -217,6 +217,14 @@ always reads local files (override the path with `DRILLING_DATA_PATH`).
 
 ---
 
+## Data Sources & Attributions
+
+- **Equinor Volve Dataset**: Volve field drilling telemetry logs and Daily Drilling Reports (DDR) are derived from the open data release by **Equinor ASA** and the former Volve licence partners (**ExxonMobil**, **Bayerngas**). The dataset is accessed under Equinor's modified Creative Commons Attribution (CC BY) license. The terms permit commercial and non-commercial usage while prohibiting the sale of the raw data. Credit and gratitude are extended to Equinor and its partners for making real-world North Sea operational data accessible. See [Equinor Volve Data Sharing](https://www.equinor.com/energy/volve-data-sharing) for the license terms.
+- **DataDRILL Research Dataset**: Kick detection and formation pressure scenarios utilize the open dataset published by Arifeen, M. et al. (2024), *"DataDRILL: Formation Pressure Prediction and Kick Detection for Drilling Rigs"*, hosted on Zenodo.
+- **Simulation**: Synthetic benchmark scenarios are generated deterministically using physical models documented in [`docs/PHYSICS.md`](docs/PHYSICS.md).
+
+---
+
 ## License
 
 This project is licensed under the MIT License.
