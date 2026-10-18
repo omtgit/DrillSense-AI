@@ -70,7 +70,6 @@ def inject_design_system():
     }
 
     .main .block-container {
-        animation: dsFadeIn 0.25s ease-out;
         max-width: 1200px;
         padding-top: 2rem;
         padding-bottom: 3rem;

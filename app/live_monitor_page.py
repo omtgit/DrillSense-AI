@@ -205,38 +205,13 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
     if selected_well in hist and hist[selected_well]:
         w_df = pd.DataFrame(hist[selected_well])
         if not w_df.empty and sel_channels:
-            fig = px.line(
-                w_df,
-                x="timestamp",
-                y=[c for c in sel_channels if c in w_df.columns],
-                title=f"{selected_well} - Live Telemetry Trends",
-                labels={"timestamp": "Time", "value": "Reading", "variable": "Sensor Channel"}
-            )
-            apply_plotly_theme(fig)
-            fig.update_layout(
-                height=320,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                transition=dict(duration=0),
-                uirevision=f"{selected_well}_{sel_channels}",
-            )
-            st.plotly_chart(fig, width="stretch", key=f"chart_telemetry_{selected_well}", config={"staticPlot": False, "displayModeBar": False})
+            chart_df = w_df.set_index("timestamp")[[c for c in sel_channels if c in w_df.columns]]
+            st.line_chart(chart_df, height=300)
 
-            # Mini Risk Score strip
-            fig_risk = px.area(
-                w_df,
-                x="timestamp",
-                y="risk_score",
-                title=f"{selected_well} - Continuous Risk Score (%)",
-                labels={"timestamp": "Time", "risk_score": "Risk Score (%)"}
-            )
-            apply_plotly_theme(fig_risk)
-            fig_risk.update_layout(
-                height=180,
-                yaxis_range=[0, 100],
-                transition=dict(duration=0),
-                uirevision=f"risk_{selected_well}",
-            )
-            st.plotly_chart(fig_risk, width="stretch", key=f"chart_risk_{selected_well}", config={"staticPlot": False, "displayModeBar": False})
+            # Continuous Risk Score Area chart
+            st.caption(f"{selected_well} - Continuous Operational Risk Score (%)")
+            risk_df = w_df.set_index("timestamp")[["risk_score"]]
+            st.area_chart(risk_df, height=160, color="#ee5253")
     else:
         st.info("Accumulating telemetry samples...")
 
