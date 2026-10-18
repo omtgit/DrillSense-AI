@@ -57,7 +57,7 @@ class ReplaySource(BaseTelemetrySource):
         speed_multiplier: float = 0.0,
         loop: bool = False,
     ):
-        self._df = df.copy().sort_values(["well_id", "timestamp"]).reset_index(drop=True)
+        self._df = df.copy().sort_values(["timestamp", "well_id"]).reset_index(drop=True)
         self.speed_multiplier = speed_multiplier
         self.loop = loop
         self._cursor = 0

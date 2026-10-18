@@ -43,15 +43,19 @@ def get_live_state(det):
     return st.session_state["live_engine"], st.session_state["live_replay_source"], st.session_state["live_storage"]
 
 
-def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: int = 1):
-    """Advance the live simulation by n_steps rows."""
+def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: Optional[int] = None):
+    """Advance the live simulation by stepping through all available wells."""
     if st.session_state.get("live_paused", False):
         return
 
     hist = st.session_state["live_history_by_well"]
     ticks = st.session_state["live_tick_results"]
 
-    for _ in range(n_steps):
+    # Step at least once for each well so the entire fleet updates simultaneously
+    num_wells = len(source.well_ids) or 3
+    steps = n_steps if n_steps is not None else num_wells
+
+    for _ in range(steps):
         try:
             row = next(source.stream_rows())
         except StopIteration:
@@ -145,7 +149,7 @@ def render_live_monitor(det):
 def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: RuntimeStorage):
     """Auto-refreshing fragment rendering real-time tiles, charts, and alert lists."""
     if not st.session_state.get("live_paused", False):
-        step_simulation(engine, source, n_steps=1)
+        step_simulation(engine, source)
 
     tick_results = st.session_state.get("live_tick_results", {})
     hist = st.session_state.get("live_history_by_well", {})
