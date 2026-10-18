@@ -137,10 +137,7 @@ def render_live_monitor(det):
                 unsafe_allow_html=True
             )
 
-    # Auto-stepping when active
-    if not st.session_state.get("live_paused", False):
-        step_simulation(engine, source, n_steps=1)
-
+    # Auto-stepping when active is handled inside the fragment
     _render_live_content(engine, source, storage)
 
 
@@ -216,8 +213,13 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
                 labels={"timestamp": "Time", "value": "Reading", "variable": "Sensor Channel"}
             )
             apply_plotly_theme(fig)
-            fig.update_layout(height=320, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-            st.plotly_chart(fig, width="stretch")
+            fig.update_layout(
+                height=320,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                transition=dict(duration=0),
+                uirevision=f"{selected_well}_{sel_channels}",
+            )
+            st.plotly_chart(fig, width="stretch", key=f"chart_telemetry_{selected_well}", config={"staticPlot": False, "displayModeBar": False})
 
             # Mini Risk Score strip
             fig_risk = px.area(
@@ -228,8 +230,13 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
                 labels={"timestamp": "Time", "risk_score": "Risk Score (%)"}
             )
             apply_plotly_theme(fig_risk)
-            fig_risk.update_layout(height=180, yaxis_range=[0, 100])
-            st.plotly_chart(fig_risk, width="stretch")
+            fig_risk.update_layout(
+                height=180,
+                yaxis_range=[0, 100],
+                transition=dict(duration=0),
+                uirevision=f"risk_{selected_well}",
+            )
+            st.plotly_chart(fig_risk, width="stretch", key=f"chart_risk_{selected_well}", config={"staticPlot": False, "displayModeBar": False})
     else:
         st.info("Accumulating telemetry samples...")
 
