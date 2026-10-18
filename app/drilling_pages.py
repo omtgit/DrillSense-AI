@@ -25,11 +25,14 @@ def render_dashboard(scored, det):
     top = ranked.iloc[0]
     n_tied = int((scored["predicted_risk_score"] == top["predicted_risk_score"]).sum())
 
+    from app.home_page import render_home_hero
+    render_home_hero(active_profile=profile.name)
+
     st.markdown(
         """
         <div class="ds-hero">
-            <div class="ds-hero-title">📊 Executive Dashboard</div>
-            <p class="ds-hero-subtitle">Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment.</p>
+            <div class="ds-hero-title">Executive Telemetry Dashboard</div>
+            <p class="ds-hero-subtitle">Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment across active wells.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -242,14 +245,21 @@ def render_decision_center(scored, det):
     with st.container(border=True):
         col_is1, col_is2 = st.columns([3, 1])
         with col_is1:
-            st.write(f"**Well** : {row['well_id']}")
-            st.write(f"**Predicted Issue** : {row['predicted_anomaly']}")
-            st.write(f"**Severity (drilling rule)** : {row['predicted_severity']}")
-            st.write(f"**Risk Score** : {row['predicted_risk_score']}")
-            st.write(f"**Recommended Response (drilling rule)** : {row['predicted_response']}")
-            st.write(f"**Ground truth at this row** : {row['anomaly_type']}")
+            st.markdown(
+                f"""
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 20px; font-size: 0.92rem; padding: 4px 0;">
+                    <div><span style="color: var(--ds-text-muted);">Well Identifier:</span> <strong>{row['well_id']}</strong></div>
+                    <div><span style="color: var(--ds-text-muted);">Timestamp:</span> <strong>{row['timestamp']}</strong></div>
+                    <div><span style="color: var(--ds-text-muted);">Predicted Issue:</span> <strong style="color: #00d2be;">{row['predicted_anomaly']}</strong></div>
+                    <div><span style="color: var(--ds-text-muted);">Operational Risk Score:</span> <strong>{row['predicted_risk_score']} / 100</strong></div>
+                    <div><span style="color: var(--ds-text-muted);">Recommended Response:</span> <strong>{row['predicted_response']}</strong></div>
+                    <div><span style="color: var(--ds-text-muted);">Ground Truth:</span> <strong>{row['anomaly_type']}</strong></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
         with col_is2:
-            st.markdown(f'<div style="text-align:right;">{severity_chip_html(row["predicted_severity"])}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:right; padding-top:4px;">{severity_chip_html(row["predicted_severity"])}</div>', unsafe_allow_html=True)
 
     report_section(scored, row, profile, rules_from_profile=True)
 

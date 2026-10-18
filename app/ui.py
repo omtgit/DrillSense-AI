@@ -55,36 +55,47 @@ def inject_design_system():
     body {
         font-family: var(--ds-font-stack);
         color: var(--ds-text);
+        letter-spacing: -0.01em;
     }
 
-    /* Page load subtle fade-in */
-    @keyframes dsFadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(4px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
+    /* Container constraints & padding */
     .main .block-container {
-        max-width: 1200px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        max-width: 1220px;
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
     }
 
-    /* Loading shimmer animation */
-    @keyframes dsShimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
+    /* Polish top Streamlit header bar */
+    header[data-testid="stHeader"] {
+        background: rgba(14, 17, 23, 0.85) !important;
+        backdrop-filter: blur(8px) !important;
+        border-bottom: 1px solid rgba(48, 54, 61, 0.4) !important;
     }
 
-    .ds-shimmer {
-        background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.02) 75%);
-        background-size: 200% 100%;
-        animation: dsShimmer 2s infinite;
+    /* Polish Streamlit Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #0b0e14 !important;
+        border-right: 1px solid var(--ds-border) !important;
+    }
+
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 1.25rem !important;
+    }
+
+    /* Radio button navigation styling */
+    div[data-testid="stRadio"] > div {
+        gap: 4px !important;
+    }
+
+    div[data-testid="stRadio"] label {
+        padding: 6px 12px !important;
+        border-radius: var(--ds-radius-sm) !important;
+        transition: background-color 0.15s ease, color 0.15s ease !important;
+        margin: 0 !important;
+    }
+
+    div[data-testid="stRadio"] label:hover {
+        background-color: var(--ds-bg-hover) !important;
     }
 
     /* Card container styling & gentle hover lift */
@@ -96,9 +107,9 @@ def inject_design_system():
     }
 
     [data-testid="stVerticalBlockBorderWrapper"]:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         border-color: var(--ds-border-light) !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
     }
 
     /* Metric cards inside bordered containers */
@@ -109,19 +120,22 @@ def inject_design_system():
 
     [data-testid="stMetricLabel"] {
         color: var(--ds-text-muted) !important;
-        font-size: 0.85rem !important;
+        font-size: 0.82rem !important;
         font-weight: 500 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
 
     [data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-        font-weight: 600 !important;
+        font-size: 1.65rem !important;
+        font-weight: 700 !important;
         color: var(--ds-text) !important;
+        font-variant-numeric: tabular-nums;
     }
 
     /* Responsive touch targets for buttons */
     button[kind="primary"], button[kind="secondary"], .stButton > button {
-        min-height: 42px !important;
+        min-height: 40px !important;
         border-radius: var(--ds-radius-sm) !important;
         font-weight: 500 !important;
         transition: all 0.15s ease-in-out !important;
@@ -145,7 +159,7 @@ def inject_design_system():
         gap: 6px;
         padding: 4px 10px;
         border-radius: 9999px;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -158,17 +172,19 @@ def inject_design_system():
         border-bottom: 1px solid var(--ds-border);
     }
     .ds-hero-title {
-        font-size: 1.85rem;
+        font-size: 1.75rem;
         font-weight: 700;
         margin-bottom: 0.25rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        letter-spacing: -0.01em;
     }
     .ds-hero-subtitle {
         color: var(--ds-text-muted);
-        font-size: 0.95rem;
+        font-size: 0.92rem;
         margin-bottom: 0;
+        line-height: 1.45;
     }
 
     /* Status Strip */
@@ -184,7 +200,7 @@ def inject_design_system():
         background: var(--ds-bg-card);
         border: 1px solid var(--ds-border);
         border-radius: var(--ds-radius-sm);
-        padding: 8px 12px;
+        padding: 10px 14px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -196,8 +212,43 @@ def inject_design_system():
         letter-spacing: 0.05em;
     }
     .ds-status-item-val {
-        font-size: 1.15rem;
+        font-size: 1.25rem;
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Feature card container */
+    .ds-feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin: 1.5rem 0;
+    }
+    .ds-feature-card {
+        background: var(--ds-bg-card);
+        border: 1px solid var(--ds-border);
+        border-radius: var(--ds-radius-md);
+        padding: 18px 20px;
+        transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+    .ds-feature-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--ds-accent);
+    }
+    .ds-feature-title {
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin-bottom: 6px;
+        color: var(--ds-text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .ds-feature-desc {
+        font-size: 0.88rem;
+        color: var(--ds-text-muted);
+        line-height: 1.45;
+        margin: 0;
     }
 
     /* Responsive adjustments for mobile screens */
@@ -231,9 +282,9 @@ def empty_state(message: str, icon: str = "&#128269;"):
     """Displays a friendly, accessible empty state card."""
     st.markdown(
         f"""
-        <div style="text-align:center; padding: 2rem 1rem; border: 1px dashed var(--ds-border, #30363d); border-radius: 8px; background: rgba(22, 27, 34, 0.4); margin: 1rem 0;">
-            <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">{icon}</div>
-            <p style="color: var(--ds-text-muted, #8b949e); margin: 0; font-size: 0.95rem;">{message}</p>
+        <div style="text-align:center; padding: 2.5rem 1.5rem; border: 1px dashed var(--ds-border, #30363d); border-radius: 10px; background: rgba(22, 27, 34, 0.45); margin: 1.25rem 0;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">{icon}</div>
+            <p style="color: var(--ds-text-muted, #8b949e); margin: 0; font-size: 0.95rem; line-height: 1.5;">{message}</p>
         </div>
         """,
         unsafe_allow_html=True,

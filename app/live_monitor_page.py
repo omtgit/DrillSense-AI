@@ -8,7 +8,7 @@ Features:
 - Interactive Replay controls (Speed multiplier, Play/Pause, Seek, and Jump to Next Event)
 - Real-time connection-health / data-cadence status line
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
@@ -252,7 +252,7 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
                             st.rerun()
                     if alt.status in ("open", "acknowledged"):
                         if st.button("Snooze (30m)", key=f"snz_{alt.alert_id}"):
-                            snooze_until = (datetime.now(datetime.timezone.utc) + timedelta(minutes=30)).isoformat()
+                            snooze_until = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
                             storage.update_alert_status(alt.alert_id, "snoozed", snooze_until=snooze_until)
                             st.rerun()
 
