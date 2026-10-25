@@ -18,7 +18,7 @@ import streamlit as st
 from app.engine.engine import LiveEngine
 from app.engine.storage import AlertRecord, RuntimeStorage
 from app.ingest.sources import ReplaySource
-from app.ui import apply_plotly_theme, severity_chip_html
+from app.ui import apply_plotly_theme, severity_chip_html, page_header
 
 
 def get_live_state(det):
@@ -80,13 +80,13 @@ def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: Optional[
 
 
 def render_live_monitor(det):
+    page_header(
+        "Live Telemetry Monitor",
+        "Continuous live streaming surveillance, telemetry quality validation, and real-time alert dispatch.",
+        icon="📡",
+    )
     st.markdown(
-        """
-        <div class="ds-hero">
-            <div class="ds-hero-title">Live Telemetry Monitor</div>
-            <p class="ds-hero-subtitle">Continuous live streaming surveillance, telemetry quality validation, and alert dispatch.</p>
-        </div>
-        """,
+        '<span class="ds-live-dot"></span> **Streaming active** — updates every 2 s',
         unsafe_allow_html=True,
     )
 

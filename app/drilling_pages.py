@@ -9,7 +9,7 @@ import plotly.express as px
 import streamlit as st
 
 from report_ui import rank_by_risk, report_section
-from ui import apply_plotly_theme, severity_chip_html
+from ui import apply_plotly_theme, severity_chip_html, page_header, kv_grid
 
 HELP_PRECISION = "Of the minutes the model flagged, the share that really were inside a simulated incident."
 HELP_RECALL = "Of the minutes inside a simulated incident, the share the model flagged."
@@ -28,14 +28,10 @@ def render_dashboard(scored, det):
     from app.home_page import render_home_hero
     render_home_hero(active_profile=profile.name)
 
-    st.markdown(
-        """
-        <div class="ds-hero">
-            <div class="ds-hero-title">Executive Telemetry Dashboard</div>
-            <p class="ds-hero-subtitle">Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment across active wells.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    page_header(
+        "Executive Dashboard",
+        subtitle="Continuous rig telemetry surveillance, anomaly detection, and operational risk assessment across active wells.",
+        icon="📊"
     )
 
     # Status strip: wells in normal, watch, and alarm states
@@ -99,29 +95,29 @@ def render_dashboard(scored, det):
     st.subheader("Highest Risk Well")
     with st.container(border=True):
         chip = severity_chip_html(top['predicted_severity'])
+        # Header row with title and severity chip
         st.markdown(
             f"""
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-weight:600; color:var(--ds-text); font-size:1.05rem;">Critical Telemetry Alert</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <span style="font-weight:700; color:var(--ds-danger); font-size:0.85rem;
+                             text-transform:uppercase; letter-spacing:0.06em;">
+                    ⚠ Critical Telemetry Alert
+                </span>
                 <div>{chip}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.error(
-            f"""
-Well ID: {top['well_id']}
-
-Timestamp: {top['timestamp']}
-
-Predicted issue: {top['predicted_anomaly']}
-
-Risk score (0 to 100, higher means the model is more sure something is wrong): {top['predicted_risk_score']}
-
-Severity (from the drilling rules, for the predicted issue): {top['predicted_severity']}
-
-Ground truth at this row: {top['anomaly_type']}
-"""
+        kv_grid(
+            {
+                "Well Identifier": top['well_id'],
+                "Timestamp": str(top['timestamp']),
+                "Predicted Issue": top['predicted_anomaly'],
+                "Operational Risk Score": f"{top['predicted_risk_score']} / 100",
+                "Severity (drilling rule)": top['predicted_severity'],
+                "Ground Truth at This Row": top['anomaly_type'],
+            },
+            accent_keys=["Predicted Issue"],
         )
         st.caption(
             f"{n_tied:,} rows share this risk score. Ties are broken by most recent timestamp, then well id."
@@ -152,11 +148,16 @@ def _runs_frame(scored, column, label):
 
 
 def render_explorer(scored, profile):
+    page_header(
+        "Well Explorer",
+        subtitle="Investigate per-well telemetry signals, event timelines, and ground-truth vs model-prediction comparisons.",
+        icon="🔍",
+    )
     wells = sorted(scored["well_id"].unique())
     selected = st.selectbox("Select Well", wells)
     temp = scored[scored["well_id"] == selected]
 
-    tab_signals, tab_events, tab_details = st.tabs(["Signals", "Events", "Details"])
+    tab_signals, tab_events, tab_details = st.tabs(["📈 Signals", "⚡ Events", "📋 Details"])
 
     with tab_signals:
         channels = list(profile.channels)
@@ -218,13 +219,16 @@ def render_explorer(scored, profile):
 
 def render_decision_center(scored, det):
     profile = det.profile
-    st.header("AI Decision Center")
-    st.caption(
-        "One row per well: its highest-risk minute by the XGBoost risk score (ties: most recent first). "
-        "Severity and response come from the drilling rules for the PREDICTED issue, not from ground truth. "
-        f"{profile.review_note} The optional AI assistant below is only called when you press a button."
+    page_header(
+        "AI Decision Center",
+        subtitle=(
+            "Ranked findings by XGBoost risk score. Severity and response come from drilling rules "
+            f"for the predicted issue. {profile.review_note} The optional AI assistant is only called when you press a button."
+        ),
+        icon="🤖",
     )
     best = rank_by_risk(scored).drop_duplicates("well_id").head(10)
+
     st.dataframe(
         best[["well_id", "timestamp", "predicted_anomaly", "predicted_risk_score",
               "predicted_severity", "predicted_response", "anomaly_type"]].rename(columns={

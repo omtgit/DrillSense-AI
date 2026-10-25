@@ -17,7 +17,7 @@ import streamlit as st
 
 from app.engine.quality_audit import audit_dataset_quality
 from app.rig_state import infer_rig_state
-from app.ui import empty_state, footer, severity_chip_html, show_error
+from app.ui import empty_state, footer, severity_chip_html, show_error, page_header
 
 
 PROFILE_TARGET_CHANNELS = {
@@ -37,8 +37,11 @@ PROFILE_TARGET_CHANNELS = {
 
 def render_byod_page(detector_instance):
     """Render the Bring Your Own Data page."""
-    st.header("Bring Your Own Data")
-    st.caption("Upload and analyze proprietary or field telemetry securely within your browser session.")
+    page_header(
+        "Bring Your Own Data",
+        "Upload and analyze proprietary or field telemetry securely within your browser session. All data stays local.",
+        icon="📂",
+    )
 
     # 1. Prominent Privacy & Confidentiality Notice
     st.warning(
