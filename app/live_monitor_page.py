@@ -8,7 +8,7 @@ Features:
 - Interactive Replay controls (Speed multiplier, Play/Pause, Seek, and Jump to Next Event)
 - Real-time connection-health / data-cadence status line
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
@@ -18,7 +18,7 @@ import streamlit as st
 from app.engine.engine import LiveEngine
 from app.engine.storage import AlertRecord, RuntimeStorage
 from app.ingest.sources import ReplaySource
-from app.ui import apply_plotly_theme, severity_chip_html
+from app.ui import apply_plotly_theme, severity_chip_html, page_header
 
 
 def get_live_state(det):
@@ -43,15 +43,19 @@ def get_live_state(det):
     return st.session_state["live_engine"], st.session_state["live_replay_source"], st.session_state["live_storage"]
 
 
-def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: int = 1):
-    """Advance the live simulation by n_steps rows."""
+def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: Optional[int] = None):
+    """Advance the live simulation by stepping through all available wells."""
     if st.session_state.get("live_paused", False):
         return
 
     hist = st.session_state["live_history_by_well"]
     ticks = st.session_state["live_tick_results"]
 
-    for _ in range(n_steps):
+    # Step at least once for each well so the entire fleet updates simultaneously
+    num_wells = len(source.well_ids) or 3
+    steps = n_steps if n_steps is not None else num_wells
+
+    for _ in range(steps):
         try:
             row = next(source.stream_rows())
         except StopIteration:
@@ -76,13 +80,13 @@ def step_simulation(engine: LiveEngine, source: ReplaySource, n_steps: int = 1):
 
 
 def render_live_monitor(det):
+    page_header(
+        "Live Telemetry Monitor",
+        "Continuous live streaming surveillance, telemetry quality validation, and real-time alert dispatch.",
+        icon="📡",
+    )
     st.markdown(
-        """
-        <div class="ds-hero">
-            <div class="ds-hero-title">Live Telemetry Monitor</div>
-            <p class="ds-hero-subtitle">Continuous live streaming surveillance, telemetry quality validation, and alert dispatch.</p>
-        </div>
-        """,
+        '<span class="ds-live-dot"></span> **Streaming active** — updates every 2 s',
         unsafe_allow_html=True,
     )
 
@@ -137,10 +141,7 @@ def render_live_monitor(det):
                 unsafe_allow_html=True
             )
 
-    # Auto-stepping when active
-    if not st.session_state.get("live_paused", False):
-        step_simulation(engine, source, n_steps=1)
-
+    # Auto-stepping when active is handled inside the fragment
     _render_live_content(engine, source, storage)
 
 
@@ -148,7 +149,7 @@ def render_live_monitor(det):
 def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: RuntimeStorage):
     """Auto-refreshing fragment rendering real-time tiles, charts, and alert lists."""
     if not st.session_state.get("live_paused", False):
-        step_simulation(engine, source, n_steps=1)
+        step_simulation(engine, source)
 
     tick_results = st.session_state.get("live_tick_results", {})
     hist = st.session_state.get("live_history_by_well", {})
@@ -208,28 +209,13 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
     if selected_well in hist and hist[selected_well]:
         w_df = pd.DataFrame(hist[selected_well])
         if not w_df.empty and sel_channels:
-            fig = px.line(
-                w_df,
-                x="timestamp",
-                y=[c for c in sel_channels if c in w_df.columns],
-                title=f"{selected_well} - Live Telemetry Trends",
-                labels={"timestamp": "Time", "value": "Reading", "variable": "Sensor Channel"}
-            )
-            apply_plotly_theme(fig)
-            fig.update_layout(height=320, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-            st.plotly_chart(fig, width="stretch")
+            chart_df = w_df.set_index("timestamp")[[c for c in sel_channels if c in w_df.columns]]
+            st.line_chart(chart_df, height=300)
 
-            # Mini Risk Score strip
-            fig_risk = px.area(
-                w_df,
-                x="timestamp",
-                y="risk_score",
-                title=f"{selected_well} - Continuous Risk Score (%)",
-                labels={"timestamp": "Time", "risk_score": "Risk Score (%)"}
-            )
-            apply_plotly_theme(fig_risk)
-            fig_risk.update_layout(height=180, yaxis_range=[0, 100])
-            st.plotly_chart(fig_risk, width="stretch")
+            # Continuous Risk Score Area chart
+            st.caption(f"{selected_well} - Continuous Operational Risk Score (%)")
+            risk_df = w_df.set_index("timestamp")[["risk_score"]]
+            st.area_chart(risk_df, height=160, color="#ee5253")
     else:
         st.info("Accumulating telemetry samples...")
 
@@ -266,7 +252,7 @@ def _render_live_content(engine: LiveEngine, source: ReplaySource, storage: Runt
                             st.rerun()
                     if alt.status in ("open", "acknowledged"):
                         if st.button("Snooze (30m)", key=f"snz_{alt.alert_id}"):
-                            snooze_until = (datetime.now(datetime.timezone.utc) + timedelta(minutes=30)).isoformat()
+                            snooze_until = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
                             storage.update_alert_status(alt.alert_id, "snoozed", snooze_until=snooze_until)
                             st.rerun()
 

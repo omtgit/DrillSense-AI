@@ -14,7 +14,8 @@ from gemini_utils import model_name
 from profiles import get_profile
 from drilling_pages import HELP_F1, HELP_PRECISION, HELP_RECALL
 from ui import (DOCS_URL, REPO_URL, apply_plotly_theme, footer,
-                inject_design_system, severity_chip_html, show_error)
+                inject_design_system, severity_chip_html, show_error,
+                page_header, kv_grid, render_theme_toggle)
 from report_ui import rank_by_risk, report_section
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -71,14 +72,30 @@ def load_heldout_metrics():
         return None
 
 
-st.title("⛽ DrillSense AI")
-st.subheader("GPU-Benchmarked Decision Intelligence for Oilfield Monitoring")
 
-# ------------------------
-# Sidebar
-# ------------------------
 
-st.sidebar.title("Navigation")
+# ─────────────────────────────────────────────
+# Premium Sidebar
+# ─────────────────────────────────────────────
+
+# Brand block
+st.sidebar.markdown(
+    """
+    <div class="ds-sidebar-brand">
+        <div class="ds-sidebar-logo">⛽</div>
+        <div>
+            <div class="ds-sidebar-title">DrillSense AI</div>
+            <div class="ds-sidebar-version">Energy Intelligence Platform</div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Theme toggle
+render_theme_toggle()
+
+st.sidebar.markdown('<div class="ds-section-label">Domain</div>', unsafe_allow_html=True)
 
 profile_label = st.sidebar.selectbox(
     "Domain profile",
@@ -88,8 +105,10 @@ profile_label = st.sidebar.selectbox(
 )
 profile_name = profile_label.lower()
 
+st.sidebar.markdown('<div class="ds-section-label" style="margin-top:12px;">Navigation</div>', unsafe_allow_html=True)
+
 page = st.sidebar.radio(
-    "Select Page",
+    "Navigation",
     [
         "Executive Dashboard",
         "Live Monitor",
@@ -99,7 +118,8 @@ page = st.sidebar.radio(
         "Model Evaluation",
         "CPU vs GPU Benchmark",
         "About"
-    ]
+    ],
+    label_visibility="collapsed",
 )
 
 if profile_name == "drilling" or data_source_name() == "local":
@@ -284,14 +304,10 @@ if page == "Executive Dashboard":
         (df["predicted_risk_score"] == highest["predicted_risk_score"]).sum()
     )
 
-    st.markdown(
-        """
-        <div class="ds-hero">
-            <div class="ds-hero-title">📊 Executive Dashboard</div>
-            <p class="ds-hero-subtitle">Continuous oilfield surveillance, anomaly detection, and operational risk assessment.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    page_header(
+        "Executive Dashboard",
+        "Continuous oilfield surveillance, anomaly detection, and operational risk assessment.",
+        icon="📊",
     )
 
     # Status strip: wells normal / watch / alarm
@@ -369,7 +385,7 @@ if page == "Executive Dashboard":
 
     st.divider()
 
-    st.subheader("Highest Risk Well")
+    st.markdown('<div class="ds-section-label" style="margin-top:16px;">Highest Risk Well</div>', unsafe_allow_html=True)
 
     with st.container(border=True):
         chip = severity_chip_html(highest['severity'])
@@ -382,18 +398,15 @@ if page == "Executive Dashboard":
             """,
             unsafe_allow_html=True,
         )
-        st.error(
-           f"""
-        Well ID: {highest['well_id']}
-
-        Timestamp: {highest['timestamp']}
-
-        Predicted Issue: {highest['predicted_anomaly']}
-
-        Risk Score (0 to 100): {highest['predicted_risk_score']}
-
-        Severity (ground truth): {highest['severity']}
-        """
+        kv_grid(
+            {
+                "Well ID": str(highest['well_id']),
+                "Timestamp": str(highest['timestamp']),
+                "Predicted Issue": str(highest['predicted_anomaly']),
+                "Risk Score (0-100)": str(highest['predicted_risk_score']),
+                "Severity (ground truth)": str(highest['severity']),
+            },
+            danger_keys=["Risk Score (0-100)"],
         )
 
         st.caption(
@@ -425,6 +438,8 @@ if page == "Executive Dashboard":
 # ===================================================
 
 elif page == "Well Explorer":
+
+    page_header("Well Explorer", "Deep-dive into individual well telemetry, signal quality, and anomaly events.", icon="🔍")
 
     wells = sorted(df["well_id"].unique())
 
@@ -535,7 +550,7 @@ elif page == "Well Explorer":
 
 elif page == "AI Decision Center":
 
-    st.header("AI Decision Center")
+    page_header("AI Decision Center", "Risk-ranked prioritisation, incident summaries, and AI-assisted response recommendations.", icon="🧠")
 
     st.caption(
         "The table ranks rows by the XGBoost risk score (ties: most recent first). "
@@ -603,7 +618,7 @@ elif page == "Model Evaluation":
 
 elif page == "CPU vs GPU Benchmark":
 
-    st.header("CPU vs GPU benchmark (Colab, Tesla T4, offline)")
+    page_header("CPU vs GPU Benchmark", "One-off offline CSV-read benchmark: Pandas (CPU) vs RAPIDS cuDF (GPU) on Google Colab.", icon="⚡")
 
     st.warning(
         "This is a one-off offline benchmark, not part of this app. It measured only "
@@ -657,7 +672,7 @@ elif page == "CPU vs GPU Benchmark":
 
 elif page == "About":
 
-    st.header("About DrillSense AI")
+    page_header("About DrillSense AI", "An educational petroleum-engineering intelligence platform built with Streamlit, XGBoost, and Isolation Forest.", icon="ℹ️")
 
     with st.container(border=True):
         st.markdown("""

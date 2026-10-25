@@ -8,7 +8,7 @@ APP = Path(__file__).resolve().parent.parent / "app"
 def test_every_cache_decorator_has_a_friendly_spinner_message():
     bad = []
     for path in APP.glob("*.py"):
-        for m in re.finditer(r"@st\.cache_(?:data|resource)(\(.*?\))?\s*\ndef (\w+)", path.read_text(), re.S):
+        for m in re.finditer(r"@st\.cache_(?:data|resource)(\(.*?\))?\s*\ndef (\w+)", path.read_text(encoding="utf-8"), re.S):
             args, name = m.group(1) or "", m.group(2)
             msg = re.search(r'show_spinner=("([^"]+)"|False)', args)
             if not msg or (msg.group(2) and name in msg.group(2)) or (msg.group(2) and "_" in msg.group(2)):
@@ -47,7 +47,7 @@ def test_every_feature_in_the_results_file_gets_a_label():
 
 
 def test_startup_status_is_short_and_get_detector_has_no_second_spinner():
-    src = (APP / "main.py").read_text()
+    src = (APP / "main.py").read_text(encoding="utf-8")
     m = re.search(r'st\.status\("([^"]+)"', src)
     assert m and len(m.group(1)) <= 60, m and m.group(1)
     assert re.search(r"@st\.cache_resource\(show_spinner=False\)[^\n]*\ndef get_detector", src)

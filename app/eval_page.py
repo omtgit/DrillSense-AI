@@ -7,7 +7,7 @@ import plotly.express as px
 
 from labels import feature_label
 from profiles import get_profile
-from ui import apply_plotly_theme
+from ui import apply_plotly_theme, page_header
 
 RESULTS = Path(__file__).resolve().parent.parent / "docs" / "eval_results.json"
 
@@ -117,7 +117,11 @@ def run_summary_frame(cfg, mode, budget):
 
 
 def render(st):
-    st.header("Model Evaluation")
+    page_header(
+        "Model Evaluation",
+        "Comparing anomaly-detection methods on simulated wells: PR-AUC, AUROC, detection rate, delay, and false-alarm budget.",
+        icon="📊",
+    )
     st.caption("Results come from simulated wells, so they compare methods with each other, not with real rigs.")
     res = load_results()
     if res is None:
